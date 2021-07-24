@@ -1,3 +1,5 @@
+#include <QuickMpr121.h>
+#include <FastLED.h>
 #include "LUFAConfig.h"
 #include <LUFA.h>
 #include "Joystick.h"
@@ -7,18 +9,19 @@
 #define MILLIDEBOUNCE 1 //Debounce time in milliseconds
 #define pinOBLED 21  //Onboard LED pin
 
-
 bool buttonStartBefore;
 bool buttonSelectBefore;
-byte buttonStatus[15];
+byte buttonStatus[16];
+int buttonSwitchModeTimer = 100;
+int switchModePin = 20;
 
 /*
   0x4000,
-  0x8000,
+  0x8000,*/
 #define CAPTURE_MASK_ON 0x2000
 #define R3_MASK_ON 0x800
 #define L3_MASK_ON 0x400
- */
+ 
 #define DPAD_UP_MASK_ON 0x00
 #define DPAD_UPRIGHT_MASK_ON 0x01
 #define DPAD_RIGHT_MASK_ON 0x02
@@ -55,6 +58,43 @@ byte buttonStatus[15];
 #define BUTTONSTART 12
 #define BUTTONSELECT 13
 #define BUTTONHOME 14
+
+//Slider
+#define NUM_MPRS 3
+#define PROXIMITY_ENABLE false
+#define NUM_SENSORS 36;
+bool sensors[36];
+bool sensorTouched;
+
+// create the mpr121 instances
+// these will have addresses set automatically
+mpr121 mprs[NUM_MPRS];
+
+
+
+typedef enum {
+  GAMEPLAY,
+  NAVIGATION,
+  DEMO,
+  ARCADE,
+  MENU
+} SliderMode;
+SliderMode sliderMode = GAMEPLAY;
+
+int sensorsArcade[4] {0, 1, 2, 3};
+int sensorsDemo[4] {9, 10, 11, 12};
+int sensorsNav[4] {18, 19, 20, 21};
+int sensorsGame[5] {27, 28, 29, 30, 31};
+
+
+
+// LEDs
+#define NUM_LEDS_PER_STRIP 32
+#define LED_TYPE WS2812B
+#define LED_DATA_PIN 10
+#define COLOR_ORDER GRB
+CRGB leds[NUM_LEDS_PER_STRIP];
+
 
 Bounce joystickUP = Bounce();
 Bounce joystickDOWN = Bounce();
@@ -108,7 +148,7 @@ void setupPins(){
     joystickLEFT.attach(2,INPUT_PULLUP);
     joystickRIGHT.attach(3,INPUT_PULLUP);
     buttonA.attach(5,INPUT_PULLUP);
-    buttonB.attach(4,INPUT_PULLUP);;
+    buttonB.attach(4,INPUT_PULLUP);
     buttonX.attach(7,INPUT_PULLUP);
     buttonY.attach(6,INPUT_PULLUP);
     buttonLB.attach(9,INPUT_PULLUP);
@@ -118,7 +158,7 @@ void setupPins(){
     buttonSTART.attach(15,INPUT_PULLUP);
     buttonSELECT.attach(16,INPUT_PULLUP);
     buttonHOME.attach(18,INPUT_PULLUP);
-
+  
     joystickUP.interval(MILLIDEBOUNCE);
     joystickDOWN.interval(MILLIDEBOUNCE);
     joystickLEFT.interval(MILLIDEBOUNCE);
@@ -138,11 +178,48 @@ void setupPins(){
     pinMode(pinOBLED, OUTPUT);  
     //Set the LED to low to make sure it is off
     digitalWrite(pinOBLED, HIGH);
+
+    pinMode(switchModePin, INPUT);
 }
+
+void sensorsInitialization(){
+  
+    for (int i = 0; i < NUM_MPRS; i++) {
+    // this special line makes `mpr` the same as typing `mprs[i]`
+    mpr121 &mpr = mprs[i];
+    
+    // `mpr.begin()` sets up the Wire library
+    // mpr121 can run in 400kHz mode; if you have issues with it or want 100kHz speed, use `mpr121.begin(100000)`
+    // (or use `Wire.begin` and/or `Wire.setClock` directly instead of this)
+    mpr.begin();
+
+    // set autoconfig charge level based on 3.2V
+    // without this, it will assume 1.8V (a safe default, but not always ideal)
+    mpr.autoConfigUSL = 256L * (3200 - 700) / 3200;
+
+    // enable proximity sensing if it's set to true
+    if (PROXIMITY_ENABLE)
+      mpr.proxEnable = MPR_ELEPROX_0_TO_11;
+    else
+      mpr.proxEnable = MPR_ELEPROX_DISABLED;
+
+    // start sensing (for 36 electrodes)
+    mpr.start(36);
+  
+  }
+}
+
+void ledsInitialization(){
+  FastLED.addLeds<LED_TYPE, LED_DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS_PER_STRIP);
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, 400);
+  }
+
 void setup() {
+  sensorsInitialization();
   buttonStartBefore = false;
   buttonSelectBefore = false;
   setupPins();
+  ledsInitialization();
   SetupHardware();
   GlobalInterruptEnable();
 }
@@ -150,12 +227,172 @@ void setup() {
 
 void loop() {
     buttonRead();
-    checkModeChange();
+    checkSensors();
+    if (digitalRead(switchModePin))
+      sliderMode = MENU;
+    switch(sliderMode)
+    {
+      case GAMEPLAY: // Slider act like the HORI controller's Slider with Dedicated Controller Mode (For Mega39's / MegaMix / Future Tone (International version not compatible)
+      sliderGameplay();
+      break;
+      case NAVIGATION: // Slider act like a controller with navigations buttons if you lack of buttons on your controller (customize the code below)
+      sliderNavigation();
+      break;
+      case DEMO: // Slider act as a demo, it does not interract with anything through USB (TO DO)
+      break;
+      case ARCADE: // Slider act like a Keyboard that you can hook up to Project Diva Arcade Future Tone (TO DO)
+      break;
+      case MENU: // Slider is in the menu selection mode
+      sliderMenu();
+    }
+    //checkModeChange();
     processButtons();
     HID_Task();
     // We also need to run the main USB management task.
     USB_USBTask();
+    FastLED.show();
 }
+
+void checkSensors(){
+  int numElectrodes = 12;
+  int sensorCount = 0;
+  int touchedSensors = 0;
+  
+  for (int i = 0; i < NUM_MPRS; i++) {
+    mpr121 &mpr = mprs[i];
+    for (int j = 0; j < numElectrodes; j++) {
+      bool touching = mpr.readTouchState(j);
+      sensors[sensorCount] = touching;
+      if(touching)
+        touchedSensors++;
+      sensorCount++;
+    }
+  }
+  
+  // Check if at least one sensor is touched
+  if(touchedSensors > 0)
+    sensorTouched = true;
+}
+
+
+void sliderMenu(){
+  /*  MENU
+   *  Arcade PC | GREEN(0-3)
+   *  Demo | PINK(9-12)
+   *  Navigation | BLUE(18-21)
+   *  Gameplay | RED(27-32)
+   */
+   
+    //LOGIC
+  if (!digitalRead(switchModePin))
+  {
+    if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]])
+      sliderMode = ARCADE;
+      else if(sensors[sensorsDemo[0]] || sensors[sensorsDemo[1]] || sensors[sensorsDemo[2]] || sensors[sensorsDemo[3]])
+      sliderMode = DEMO;
+      else if(sensors[sensorsNav[0]] || sensors[sensorsNav[1]] || sensors[sensorsNav[2]] || sensors[sensorsNav[3]])
+      sliderMode = NAVIGATION;
+      else if(sensors[sensorsGame[0]] || sensors[sensorsGame[1]] || sensors[sensorsGame[2]] || sensors[sensorsGame[3]] || sensors[sensorsGame[4]])
+      sliderMode = GAMEPLAY;
+    
+  }
+   //LEDS
+  leds[0] = leds[1] = leds[2] = leds[3] = CRGB(0, 255, 153);
+  leds[9] = leds[10] = leds[11] = leds[12] = CRGB(255, 0, 242);
+  leds[18] = leds[19] = leds[20] = leds[21] = CRGB(0, 128, 255);
+  leds[27] = leds[28] = leds[29] = leds[30] = leds[31] = CRGB::Red;
+}
+
+
+void sliderGameplay(){
+
+  long resultBits;
+  int bit_count = 31;
+
+  int sliderBits = 0;
+  for (bool sensor : sensors)
+  {
+    // Check current Sensor state here
+    if((sensor & 0x8000) != 0)
+      sliderBits |= (1 << bit_count);
+
+    bit_count -= 1;
+  }
+
+  resultBits = sliderBits ^ 0x80808080;
+
+
+  // SENDING TO CONTROLLER THE RESULTED VALUES
+  ReportData.RY = (resultBits >> 24) & 0xFF;
+  ReportData.RX = (resultBits >> 16) & 0xFF;
+  ReportData.LY = (resultBits >> 8) & 0xFF;
+  ReportData.LX = (resultBits) & 0xFF;
+
+  // LEDS
+  if(!sensorTouched){
+    bool lightUp = true;
+      for (CRGB &led : leds){
+        if(lightUp){
+          led = CRGB::White;
+          lightUp = false;
+          }
+          else{
+            lightUp = true;
+            }
+        }
+  }else{
+    for (CRGB &led : leds){
+        led = CRGB::Black;
+        }
+    for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
+      if(sensors[i]){
+        leds[i] = CRGB::White;
+        }
+      }
+    }
+  
+  
+  }
+
+void sliderNavigation(){
+  
+  // TO DO : IMPLEMENT LEDS FOR NAVIGATION MODE
+  
+  // sensors 0-2 & 29-31 : L1 / R1 | Blue
+  // sensors 3-5 & 26-28 : L2 / R2 | Darker blue
+  // sensors 6 & 25 : L3 / R3 | darkest blue
+  // sensors 9-11 : Up | Green
+  // sensors 13-15 : Down | Blue
+  // sensors 17-19 : Left | Pink
+  // sensors 21-23 : Right | Red
+
+  // Bumpers/Triggers
+  if(sensors[0] || sensors[1] || sensors[2]) {buttonStatus[BUTTONLB] = true;}
+  if(sensors[29] || sensors[30] || sensors[31]) {buttonStatus[BUTTONRB] = true;}
+  if(sensors[3] || sensors[4] || sensors[5]) {buttonStatus[BUTTONLT] = true;}
+  if(sensors[26] || sensors[27] || sensors[28]) {buttonStatus[BUTTONRT] = true;}
+  //if(sensors[6]) {buttonStatus[BUTTONL3] = true;}
+  //if(sensors[25]) {buttonStatus[BUTTONR3] = true;}
+
+  // DPAD
+  if (sensors[9] || sensors[10] || sensors[11]) {ReportData.HAT = DPAD_UP_MASK_ON;}
+  if (sensors[13] || sensors[14] || sensors[15]) {ReportData.HAT = DPAD_DOWN_MASK_ON;}
+  if (sensors[17] || sensors[18] || sensors[19]) {ReportData.HAT = DPAD_LEFT_MASK_ON;}
+  if (sensors[21] || sensors[22] || sensors[23]) {ReportData.HAT = DPAD_RIGHT_MASK_ON;}
+
+  // LEDS
+  leds[0] = leds[1] = leds[2] = leds[29] = leds[30] = leds[31] = CRGB::Blue; // L1 / R1
+  leds[3] = leds[4] = leds[5] = leds[26] = leds[27] = leds[28] = CRGB::MediumBlue; // L2 / R2
+  leds[6] = leds[25] = CRGB::CRGB::DarkBlue; // L3 / R3
+  leds[8] = leds[9] = leds[10] = CRGB(0, 255, 153); // UP
+  leds[12] = leds[13] = leds[14] = CRGB(0, 128, 255); // DOWN
+  leds[17] = leds[18] = leds[19] = CRGB(255, 0, 242); // LEFT
+  leds[21] = leds[22] = leds[23] = CRGB::Red; // RIGHT
+  
+
+  
+  }
+
 
 void buttonRead()
 {
@@ -174,14 +411,16 @@ void buttonRead()
   if (buttonSTART.update()) {buttonStatus[BUTTONSTART] = buttonSTART.fell();}
   if (buttonSELECT.update()) {buttonStatus[BUTTONSELECT] = buttonSELECT.fell();}
   if (buttonHOME.update()) {buttonStatus[BUTTONHOME] = buttonHOME.fell();}
+  
+  //if (buttonSwitchMenu.update()) {buttonStatus[BUTTONSWITCHMENU] = buttonSwitchMenu.fell();}
 }
 
 
 void processDPAD(){
-    ReportData.LX = 128;
+    /*ReportData.LX = 128;
     ReportData.LY = 128;
     ReportData.RX = 128;
-    ReportData.RY = 128;
+    ReportData.RY = 128;*/
  
     if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONRIGHT])){ReportData.HAT = DPAD_UPRIGHT_MASK_ON;}
     else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONRIGHT])) {ReportData.HAT = DPAD_DOWNRIGHT_MASK_ON;} 
@@ -247,7 +486,7 @@ void processButtons(){
         processDPAD();
         buttonProcessing();
     break;
-
+/*
     case ANALOG_MODE:   
        if(buttonStatus[BUTTONLT]){processRANALOG();}
        else{processLANALOG();}
@@ -258,7 +497,7 @@ void processButtons(){
        if(buttonStatus[BUTTONB]){processLANALOGSmash();}
        else{processLANALOG();}
        buttonProcessingSmash();
-    break;
+    break;*/
   }
 }
 void buttonProcessing(){
