@@ -9,7 +9,7 @@ You'll need the exact same hardware as the original repo, and a Slider using the
 
 (Hatsune Miku: Project Diva Future Tone (Japanese ver only) is also supported if you can convert the controller Switch to PS4 using adapter or other solutions, even using Remote Play with DS4Emulator on both PS4 and PS5)
 
-Thanks to [https://github.com/somewhatlurker](Somewhatlurker), [https://github.com/dogtopus/](Dogtopus), [https://twitter.com/correllroy](TheCorrellRoyHD), [https://www.youtube.com/channel/UCZ-jUHyriPCuebtpx48MPdQ](Zedamex) for all the needed datas, informations, and help on developping this project.
+Thanks to [Somewhatlurker](https://github.com/somewhatlurker), [Dogtopus](https://github.com/dogtopus/), [TheCorrellRoyHD](https://twitter.com/correllroy), [Zedamex](https://www.youtube.com/channel/UCZ-jUHyriPCuebtpx48MPdQ) for all the needed datas, informations, and help on developping this project.
 
 (Below is the original ReadMe)
 
