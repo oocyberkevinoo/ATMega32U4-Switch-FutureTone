@@ -1,4 +1,5 @@
 ## DO NOT USE UNTIL THIS MESSAGE IS GONE, THIS FORK IS NOT READY !!!
+I'll be able to test this thing for the ~5th August, waiting for some hardware...
 
 ## Project Diva Controller (Switch)
 
