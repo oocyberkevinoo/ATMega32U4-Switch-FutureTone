@@ -59,11 +59,14 @@ int switchModePin = 20;
 #define BUTTONSELECT 13
 #define BUTTONHOME 14
 
+bool PS4 = false;
+
 //Slider
 #define NUM_MPRS 3
 #define PROXIMITY_ENABLE false
 #define NUM_SENSORS 36;
 bool sensors[36];
+bool sensorsTouched[36];
 bool sensorTouched;
 
 // create the mpr121 instances
@@ -81,9 +84,11 @@ typedef enum {
 } SliderMode;
 SliderMode sliderMode = GAMEPLAY;
 
-int sensorsArcade[4] {0, 1, 2, 3};
-int sensorsDemo[4] {9, 10, 11, 12};
-int sensorsNav[4] {18, 19, 20, 21};
+// Slider Key mapping
+int sensorsSwapPS4[3] {0, 1, 2};
+int sensorsArcade[4] {6, 7, 8, 9};
+int sensorsDemo[4] {13, 14, 15, 16};
+int sensorsNav[4] {20, 21, 22, 23};
 int sensorsGame[5] {27, 28, 29, 30, 31};
 
 
@@ -94,6 +99,7 @@ int sensorsGame[5] {27, 28, 29, 30, 31};
 #define LED_DATA_PIN 10
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS_PER_STRIP];
+//bool idleLeds = true;
 
 
 Bounce joystickUP = Bounce();
@@ -270,9 +276,20 @@ void checkSensors(){
   }
   
   // Check if at least one sensor is touched
-  if(touchedSensors > 0)
+  if(touchedSensors > 0){
     sensorTouched = true;
+    }
+    
 }
+
+bool sensorJustTouched(int x){
+  if(sensors[x] && !sensorsTouched[x])
+    {
+    sensorsTouched[x] = true;  
+    return true;
+    }
+    return false;
+  }
 
 
 void sliderMenu(){
@@ -286,6 +303,14 @@ void sliderMenu(){
     //LOGIC
   if (!digitalRead(switchModePin))
   {
+    if((sensorJustTouched(sensorsSwapPS4[0]) || sensorJustTouched(sensorsSwapPS4[1]) || sensorJustTouched(sensorsSwapPS4[2])) && !sensorTouched)
+    {
+      if(PS4)
+        PS4 = false;
+      else
+        PS4 = true;    
+    }
+    
     if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]])
       sliderMode = ARCADE;
       else if(sensors[sensorsDemo[0]] || sensors[sensorsDemo[1]] || sensors[sensorsDemo[2]] || sensors[sensorsDemo[3]])
@@ -297,10 +322,15 @@ void sliderMenu(){
     
   }
    //LEDS
-  leds[0] = leds[1] = leds[2] = leds[3] = CRGB(0, 255, 153);
-  leds[9] = leds[10] = leds[11] = leds[12] = CRGB(255, 0, 242);
-  leds[18] = leds[19] = leds[20] = leds[21] = CRGB(0, 128, 255);
-  leds[27] = leds[28] = leds[29] = leds[30] = leds[31] = CRGB::Red;
+    if(!PS4)
+      leds[0] = leds[1] = leds[2] = CRGB::DarkRed;
+    else
+      leds[0] = leds[1] = leds[2] = CRGB::Aqua;
+      
+    leds[sensorsArcade[0]] = leds[sensorsArcade[1]] = leds[sensorsArcade[2]] = leds[sensorsArcade[3]] = CRGB(0, 255, 153);
+    leds[sensorsDemo[0]] = leds[sensorsDemo[1]] = leds[sensorsDemo[2]] = leds[sensorsDemo[3]] = CRGB(255, 0, 242);
+    leds[sensorsNav[0]] = leds[sensorsNav[1]] = leds[sensorsNav[2]] = leds[sensorsNav[3]] = CRGB(0, 128, 255);
+    leds[sensorsGame[0]] = leds[sensorsGame[1]] = leds[sensorsGame[2]] = leds[sensorsGame[3]] = leds[sensorsGame[4]] = CRGB::Red;
 }
 
 
@@ -432,6 +462,7 @@ void processDPAD(){
     else if (buttonStatus[BUTTONRIGHT]) {ReportData.HAT = DPAD_RIGHT_MASK_ON;}
     else{ReportData.HAT = DPAD_NOTHING_MASK_ON;}
 }
+
 void processLANALOG(){
     ReportData.HAT = DPAD_NOTHING_MASK_ON;
     ReportData.RX = 128;
@@ -526,3 +557,24 @@ void buttonProcessingSmash(){
   if (buttonStatus[BUTTONSELECT]){ReportData.Button |= SELECT_MASK_ON;}
   if (buttonStatus[BUTTONHOME]){ReportData.Button |= HOME_MASK_ON;}
 }
+
+/*bool testBoolArray(bool[] boolArray, bool any = false){
+  if(!any){
+    int boolTrue = 0;
+    for(bool val : boolArray){
+            if(val)
+              boolTrue++;
+      }
+      if(boolTrue >= (sizeof(boolArray)/sizeof(boolArray[0]))
+        return true;
+      else
+        return false;  
+    }
+    else{
+      for(bool val : boolArray){
+            if(val)
+              return true;
+      }
+      return false;
+      }
+  }*/
