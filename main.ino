@@ -9,11 +9,17 @@
 #define MILLIDEBOUNCE 1 //Debounce time in milliseconds
 #define pinOBLED 21  //Onboard LED pin
 
+//Debug Timer
+unsigned long previousMillis = 0;
+unsigned long interval = 90;
+bool right = true;
+int currentSlide1 = 0;
+int currentSlide2 = 0;
+
 bool buttonStartBefore;
 bool buttonSelectBefore;
-byte buttonStatus[16];
+byte buttonStatus[16] = { 0 };
 int buttonSwitchModeTimer = 100;
-int switchModePin = 20;
 
 /*
   0x4000,
@@ -58,15 +64,16 @@ int switchModePin = 20;
 #define BUTTONSTART 12
 #define BUTTONSELECT 13
 #define BUTTONHOME 14
+#define SWITCHMODEPIN 15
 
 bool PS4 = false;
 
 //Slider
 #define NUM_MPRS 3
 #define PROXIMITY_ENABLE false
-#define NUM_SENSORS 36;
-bool sensors[36];
-bool sensorsTouched[36];
+#define NUM_SENSORS 32;
+short sensors[32];
+bool sensorsTouched[32];
 bool sensorTouched;
 
 // create the mpr121 instances
@@ -96,7 +103,7 @@ int sensorsGame[5] {27, 28, 29, 30, 31};
 // LEDs
 #define NUM_LEDS_PER_STRIP 32
 #define LED_TYPE WS2812B
-#define LED_DATA_PIN 10
+#define LED_DATA_PIN 21
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS_PER_STRIP];
 //bool idleLeds = true;
@@ -117,6 +124,7 @@ Bounce buttonRT = Bounce();
 Bounce buttonSTART = Bounce();
 Bounce buttonSELECT = Bounce();
 Bounce buttonHOME = Bounce();
+Bounce switchModePin = Bounce();
 
 typedef enum {
   ANALOG_MODE,
@@ -149,21 +157,22 @@ void checkModeChange(){
   else {buttonSelectBefore = 0;buttonStartBefore = 0;}
 }
 void setupPins(){
-    joystickUP.attach(0,INPUT_PULLUP);
-    joystickDOWN.attach(1,INPUT_PULLUP);
-    joystickLEFT.attach(2,INPUT_PULLUP);
-    joystickRIGHT.attach(3,INPUT_PULLUP);
-    buttonA.attach(5,INPUT_PULLUP);
-    buttonB.attach(4,INPUT_PULLUP);
+    joystickUP.attach(2,INPUT_PULLUP);
+    joystickDOWN.attach(3,INPUT_PULLUP);
+    joystickLEFT.attach(1,INPUT_PULLUP);
+    joystickRIGHT.attach(0,INPUT_PULLUP);
+    buttonA.attach(4,INPUT_PULLUP);
+    buttonB.attach(5,INPUT_PULLUP);
     buttonX.attach(7,INPUT_PULLUP);
     buttonY.attach(6,INPUT_PULLUP);
     buttonLB.attach(9,INPUT_PULLUP);
     buttonRB.attach(8,INPUT_PULLUP);
-    buttonLT.attach(14,INPUT_PULLUP);
+    buttonLT.attach(16,INPUT_PULLUP);
     buttonRT.attach(10,INPUT_PULLUP);
     buttonSTART.attach(15,INPUT_PULLUP);
-    buttonSELECT.attach(16,INPUT_PULLUP);
+    buttonSELECT.attach(14,INPUT_PULLUP);
     buttonHOME.attach(18,INPUT_PULLUP);
+    switchModePin.attach(19, INPUT_PULLUP);
   
     joystickUP.interval(MILLIDEBOUNCE);
     joystickDOWN.interval(MILLIDEBOUNCE);
@@ -180,12 +189,11 @@ void setupPins(){
     buttonSTART.interval(MILLIDEBOUNCE);
     buttonSELECT.interval(MILLIDEBOUNCE);
     buttonHOME.interval(MILLIDEBOUNCE);
+    switchModePin.interval(MILLIDEBOUNCE);
     
-    pinMode(pinOBLED, OUTPUT);  
+    //pinMode(pinOBLED, OUTPUT);  
     //Set the LED to low to make sure it is off
-    digitalWrite(pinOBLED, HIGH);
-
-    pinMode(switchModePin, INPUT);
+    //digitalWrite(pinOBLED, HIGH);
 }
 
 void sensorsInitialization(){
@@ -228,13 +236,14 @@ void setup() {
   ledsInitialization();
   SetupHardware();
   GlobalInterruptEnable();
+  
 }
 
 
 void loop() {
     buttonRead();
     checkSensors();
-    if (digitalRead(switchModePin))
+    if (switchModePin.fell())
       sliderMode = MENU;
     switch(sliderMode)
     {
@@ -267,14 +276,14 @@ void checkSensors(){
   for (int i = 0; i < NUM_MPRS; i++) {
     mpr121 &mpr = mprs[i];
     for (int j = 0; j < numElectrodes; j++) {
-      bool touching = mpr.readTouchState(j);
+      short touching = mpr.readTouchState(j);
       sensors[sensorCount] = touching;
       if(touching)
         touchedSensors++;
       sensorCount++;
     }
   }
-  
+
   // Check if at least one sensor is touched
   if(touchedSensors > 0){
     sensorTouched = true;
@@ -301,7 +310,7 @@ void sliderMenu(){
    */
    
     //LOGIC
-  if (!digitalRead(switchModePin))
+  if (!buttonStatus[SWITCHMODEPIN])
   {
     if((sensorJustTouched(sensorsSwapPS4[0]) || sensorJustTouched(sensorsSwapPS4[1]) || sensorJustTouched(sensorsSwapPS4[2])) && !sensorTouched)
     {
@@ -335,16 +344,51 @@ void sliderMenu(){
 
 
 void sliderGameplay(){
-
   long resultBits;
   int bit_count = 31;
+  //  DEBUG
+  //sensors[0] = 0x01;
+  //sensors[7] = 0x01;
+  //sensors[15] = 0x01;
+  //sensors[23] = 0x01;
+  //sensors[31] = 0x01;
+  /*
+  unsigned long currentMillis = millis();
 
-  int sliderBits = 0;
+if (currentMillis - previousMillis > interval) {
+ previousMillis = currentMillis;
+
+ currentSlide2 = currentSlide1;
+ if(right)
+ {
+  if(currentSlide1 < 31){
+    currentSlide1++;
+  }
+  else if(currentSlide1 >= 31){
+    right = false;    
+    }
+  }
+  else
+  {
+    if(currentSlide1 > 0)
+    currentSlide1--;
+  else if(currentSlide1 <= 0)
+    right = true;    
+    }
+  
+}
+ sensors[currentSlide1] = 0x01;
+ sensors[currentSlide2] = 0x01;*/
+  //  END DEBUG
+
+  int32_t sliderBits = 0;
   for (bool sensor : sensors)
   {
+  
     // Check current Sensor state here
-    if((sensor & 0x8000) != 0)
-      sliderBits |= (1 << bit_count);
+    //if((sensor & 0x8000) != 0)
+    if(sensor)
+      sliderBits |= (1l << bit_count);
 
     bit_count -= 1;
   }
@@ -441,6 +485,7 @@ void buttonRead()
   if (buttonSTART.update()) {buttonStatus[BUTTONSTART] = buttonSTART.fell();}
   if (buttonSELECT.update()) {buttonStatus[BUTTONSELECT] = buttonSELECT.fell();}
   if (buttonHOME.update()) {buttonStatus[BUTTONHOME] = buttonHOME.fell();}
+  if (switchModePin.update()) {buttonStatus[SWITCHMODEPIN] = switchModePin.fell();}
   
   //if (buttonSwitchMenu.update()) {buttonStatus[BUTTONSWITCHMENU] = buttonSwitchMenu.fell();}
 }
@@ -517,7 +562,7 @@ void processButtons(){
         processDPAD();
         buttonProcessing();
     break;
-/*
+
     case ANALOG_MODE:   
        if(buttonStatus[BUTTONLT]){processRANALOG();}
        else{processLANALOG();}
@@ -528,7 +573,7 @@ void processButtons(){
        if(buttonStatus[BUTTONB]){processLANALOGSmash();}
        else{processLANALOG();}
        buttonProcessingSmash();
-    break;*/
+    break;
   }
 }
 void buttonProcessing(){
