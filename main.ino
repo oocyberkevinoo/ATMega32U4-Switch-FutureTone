@@ -7,18 +7,18 @@
 #include <Bounce2.h>
 
 #define MILLIDEBOUNCE 1 //Debounce time in milliseconds
-#define pinOBLED 21  //Onboard LED pin
 
 //Debug Timer
+
 unsigned long previousMillis = 0;
-unsigned long interval = 90;
+unsigned long interval = 30;
 bool right = true;
 int currentSlide1 = 0;
 int currentSlide2 = 0;
 
 bool buttonStartBefore;
 bool buttonSelectBefore;
-byte buttonStatus[16] = { 0 };
+byte buttonStatus[16] = {0};
 int buttonSwitchModeTimer = 100;
 
 /*
@@ -55,8 +55,8 @@ int buttonSwitchModeTimer = 100;
 #define BUTTONRIGHT 3
 #define BUTTONA 4
 #define BUTTONB 5
-#define BUTTONX 6
-#define BUTTONY 7
+#define BUTTONX 7
+#define BUTTONY 6
 #define BUTTONLB 8
 #define BUTTONRB 9
 #define BUTTONLT 10
@@ -71,9 +71,9 @@ bool PS4 = false;
 //Slider
 #define NUM_MPRS 3
 #define PROXIMITY_ENABLE false
-#define NUM_SENSORS 32;
-short sensors[32];
-bool sensorsTouched[32];
+#define NUM_SENSORS 36;
+short sensors[36];
+bool sensorsTouched[36];
 bool sensorTouched;
 
 // create the mpr121 instances
@@ -157,8 +157,10 @@ void checkModeChange(){
   else {buttonSelectBefore = 0;buttonStartBefore = 0;}
 }
 void setupPins(){
-    joystickUP.attach(2,INPUT_PULLUP);
-    joystickDOWN.attach(3,INPUT_PULLUP);
+  //  You'll not have enough pins on a Pro Micro, please change the pins to the correspondig one.
+  //  You can use Navgation mode of the Slider to have virtual buttons.
+    joystickUP.attach(255,INPUT_PULLUP);
+    joystickDOWN.attach(255,INPUT_PULLUP);
     joystickLEFT.attach(1,INPUT_PULLUP);
     joystickRIGHT.attach(0,INPUT_PULLUP);
     buttonA.attach(4,INPUT_PULLUP);
@@ -191,9 +193,6 @@ void setupPins(){
     buttonHOME.interval(MILLIDEBOUNCE);
     switchModePin.interval(MILLIDEBOUNCE);
     
-    //pinMode(pinOBLED, OUTPUT);  
-    //Set the LED to low to make sure it is off
-    //digitalWrite(pinOBLED, HIGH);
 }
 
 void sensorsInitialization(){
@@ -345,15 +344,16 @@ void sliderMenu(){
 
 void sliderGameplay(){
   long resultBits;
-  int bit_count = 31;
+  int bit_count = 31; // Number of sensors for your slider
   //  DEBUG
   //sensors[0] = 0x01;
   //sensors[7] = 0x01;
   //sensors[15] = 0x01;
   //sensors[23] = 0x01;
   //sensors[31] = 0x01;
-  /*
-  unsigned long currentMillis = millis();
+  //sensors[33] = 0x01;
+  
+  /*unsigned long currentMillis = millis();
 
 if (currentMillis - previousMillis > interval) {
  previousMillis = currentMillis;
@@ -384,13 +384,14 @@ if (currentMillis - previousMillis > interval) {
   int32_t sliderBits = 0;
   for (bool sensor : sensors)
   {
-  
+    if(bit_count >= 0){
     // Check current Sensor state here
     //if((sensor & 0x8000) != 0)
     if(sensor)
       sliderBits |= (1l << bit_count);
 
     bit_count -= 1;
+    }
   }
 
   resultBits = sliderBits ^ 0x80808080;
