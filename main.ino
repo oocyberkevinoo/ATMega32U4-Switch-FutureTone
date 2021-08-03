@@ -73,6 +73,7 @@ bool PS4 = false;
 #define PROXIMITY_ENABLE false
 #define NUM_SENSORS 36;
 short sensors[36];
+short sensorsConfirmed[36];
 bool sensorsTouched[36];
 bool sensorTouched;
 
@@ -200,6 +201,7 @@ void sensorsInitialization(){
     for (int i = 0; i < NUM_MPRS; i++) {
     // this special line makes `mpr` the same as typing `mprs[i]`
     mpr121 &mpr = mprs[i];
+
     
     // `mpr.begin()` sets up the Wire library
     // mpr121 can run in 400kHz mode; if you have issues with it or want 100kHz speed, use `mpr121.begin(100000)`
@@ -216,8 +218,11 @@ void sensorsInitialization(){
     else
       mpr.proxEnable = MPR_ELEPROX_DISABLED;
 
-    // start sensing (for 36 electrodes)
-    mpr.start(36);
+      // Sensitivity (default 15 - 10)
+      mpr.setAllThresholds(10, 9, false);
+
+    // start sensing
+    mpr.start(12);
   
   }
 }
@@ -276,7 +281,11 @@ void checkSensors(){
     mpr121 &mpr = mprs[i];
     for (int j = 0; j < numElectrodes; j++) {
       short touching = mpr.readTouchState(j);
-      sensors[sensorCount] = touching;
+      if(sensorsConfirmed[sensorCount] == touching)
+        sensors[sensorCount] = touching;
+        else
+        sensorsConfirmed[sensorCount] = touching;
+      
       if(touching)
         touchedSensors++;
       sensorCount++;
