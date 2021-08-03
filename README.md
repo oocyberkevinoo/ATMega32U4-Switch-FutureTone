@@ -1,5 +1,5 @@
 ## DO NOT USE UNTIL THIS MESSAGE IS GONE, THIS FORK IS NOT READY !!!
-The Slider have been tedted now and is working, but need adjustement.
+The Slider have been tested now and is working, but need adjustement.
 Use now at your own risk.
 
 ## Project Diva Controller (Switch)
