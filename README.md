@@ -1,12 +1,13 @@
 ## DO NOT USE UNTIL THIS MESSAGE IS GONE, THIS FORK IS NOT READY !!!
-I'll be able to test this thing for the ~5th August, waiting for some hardware...
+The Slider have been tedted now and is working, but need adjustement.
+Use now at your own risk.
 
 ## Project Diva Controller (Switch)
 
 This repo is a fork from the [fluffymadness/ATMega32U4-Switch-Fightstick repo](https://github.com/fluffymadness/ATMega32U4-Switch-Fightstick)
 made to create a custom Arcade Controller for Hatsune Miku: Project Diva Mega39's/MegaMix that use the Dedicated Arcade Controller mode like the official HORI controller.
 
-You'll need the exact same hardware as the original repo, and a Slider using the MPR121 module. (should use 3 of theme for 32 sensors.)
+You'll need the exact same hardware and libraries as the original repo (+ The [Quick MPR121 library, by SomewhatLurker](https://github.com/somewhatlurker/QuickMpr121) ) , and a Slider using the MPR121 module. (should use 3 of theme for 32 sensors.)
 
 (Hatsune Miku: Project Diva Future Tone (Japanese ver only) is also supported if you can convert the controller Switch to PS4 using adapter or other solutions, even using Remote Play with DS4Emulator on both PS4 and PS5)
 
