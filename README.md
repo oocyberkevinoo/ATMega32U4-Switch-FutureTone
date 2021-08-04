@@ -1,4 +1,4 @@
-## DO NOT USE UNTIL THIS MESSAGE IS GONE, THIS FORK IS NOT READY !!!
+## BETA PHASE
 The Slider have been tested now and is working, but need adjustement.
 Use now at your own risk.
 
