@@ -13,6 +13,11 @@ You'll need the exact same hardware and libraries as the original repo (+ The [Q
 
 Thanks to [Somewhatlurker](https://github.com/somewhatlurker), [Dogtopus](https://github.com/dogtopus/), [TheCorrellRoyHD](https://twitter.com/correllroy), [Zedamex](https://www.youtube.com/channel/UCZ-jUHyriPCuebtpx48MPdQ) for all the needed datas, informations, and help on developping this project.
 
+## TO DO
+- PS4 Support
+- Adjusting sensitivity
+- More buttons in Navigation Mode (L3 & R3)
+
 (Below is the original ReadMe)
 
 ## Switch Fightstick Code (Atmega32U4)
