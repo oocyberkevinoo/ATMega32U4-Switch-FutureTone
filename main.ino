@@ -434,12 +434,13 @@ if (currentMillis - previousMillis > interval) {
     bool lightUp = true;
       for (CRGB &led : leds){
         if(lightUp){
-          led = CRGB::Blue;
+          led = CRGB::White;
           lightUp = false;
           }
           else{
             lightUp = true;
             }
+            //led = CRGB::White;
         }
   /*}else if(resultBits == noTouchBits){
     bool lightUp = true;
