@@ -258,8 +258,10 @@ void loop() {
       sliderNavigation();
       break;
       case DEMO: // Slider act as a demo, it does not interract with anything through USB (TO DO)
+      sliderMenu();
       break;
       case ARCADE: // Slider act like a Keyboard that you can hook up to Project Diva Arcade Future Tone (TO DO)
+      sliderMenu();
       break;
       case MENU: // Slider is in the menu selection mode
       sliderMenu();
@@ -316,6 +318,15 @@ void sliderMenu(){
    *  Navigation | BLUE(18-21)
    *  Gameplay | RED(27-32)
    */
+   // Default Stick
+  long resultBits;
+  int32_t sliderBits = 0;
+  resultBits = sliderBits ^ 0x80808080;
+  // SENDING TO CONTROLLER THE RESULTED VALUES
+  ReportData.RY = (resultBits >> 24) & 0xFF;
+  ReportData.RX = (resultBits >> 16) & 0xFF;
+  ReportData.LY = (resultBits >> 8) & 0xFF;
+  ReportData.LX = (resultBits) & 0xFF;
    
     //LOGIC
   if (!buttonStatus[SWITCHMODEPIN])
@@ -339,6 +350,10 @@ void sliderMenu(){
     
   }
    //LEDS
+for (CRGB &led : leds){
+        led = CRGB::Black;
+        }
+   
     if(!PS4)
       leds[0] = leds[1] = leds[2] = CRGB::DarkRed;
     else
@@ -353,6 +368,7 @@ void sliderMenu(){
 
 void sliderGameplay(){
   long resultBits;
+  long noTouchBits;
   int bit_count = 31; // Number of sensors for your slider
   //  DEBUG
   //sensors[0] = 0x01;
@@ -391,6 +407,7 @@ if (currentMillis - previousMillis > interval) {
   //  END DEBUG
 
   int32_t sliderBits = 0;
+  noTouchBits = sliderBits ^ 0x80808080;
   for (bool sensor : sensors)
   {
     if(bit_count >= 0){
@@ -417,14 +434,25 @@ if (currentMillis - previousMillis > interval) {
     bool lightUp = true;
       for (CRGB &led : leds){
         if(lightUp){
-          led = CRGB::White;
+          led = CRGB::Blue;
           lightUp = false;
           }
           else{
             lightUp = true;
             }
         }
-  }else{
+  /*}else if(resultBits == noTouchBits){
+    bool lightUp = true;
+      for (CRGB &led : leds){
+        if(lightUp){
+          led = CRGB::White;
+          lightUp = false;
+          }
+          else{
+            lightUp = true;
+            }
+        }*/
+    }else{
     for (CRGB &led : leds){
         led = CRGB::Black;
         }
@@ -439,8 +467,16 @@ if (currentMillis - previousMillis > interval) {
   }
 
 void sliderNavigation(){
-  
-  // TO DO : IMPLEMENT LEDS FOR NAVIGATION MODE
+
+  // Default Stick
+  long resultBits;
+  int32_t sliderBits = 0;
+  resultBits = sliderBits ^ 0x80808080;
+  // SENDING TO CONTROLLER THE RESULTED VALUES
+  ReportData.RY = (resultBits >> 24) & 0xFF;
+  ReportData.RX = (resultBits >> 16) & 0xFF;
+  ReportData.LY = (resultBits >> 8) & 0xFF;
+  ReportData.LX = (resultBits) & 0xFF;
   
   // sensors 0-2 & 29-31 : L1 / R1 | Blue
   // sensors 3-5 & 26-28 : L2 / R2 | Darker blue
@@ -452,19 +488,30 @@ void sliderNavigation(){
 
   // Bumpers/Triggers
   if(sensors[0] || sensors[1] || sensors[2]) {buttonStatus[BUTTONLB] = true;}
+  else {buttonStatus[BUTTONLB] = false;}
   if(sensors[29] || sensors[30] || sensors[31]) {buttonStatus[BUTTONRB] = true;}
+  else {buttonStatus[BUTTONRB] = false;}
   if(sensors[3] || sensors[4] || sensors[5]) {buttonStatus[BUTTONLT] = true;}
+  else {buttonStatus[BUTTONLT] = false;}
   if(sensors[26] || sensors[27] || sensors[28]) {buttonStatus[BUTTONRT] = true;}
+  else {buttonStatus[BUTTONRT] = false;}
   //if(sensors[6]) {buttonStatus[BUTTONL3] = true;}
   //if(sensors[25]) {buttonStatus[BUTTONR3] = true;}
 
   // DPAD
-  if (sensors[9] || sensors[10] || sensors[11]) {ReportData.HAT = DPAD_UP_MASK_ON;}
-  if (sensors[13] || sensors[14] || sensors[15]) {ReportData.HAT = DPAD_DOWN_MASK_ON;}
-  if (sensors[17] || sensors[18] || sensors[19]) {ReportData.HAT = DPAD_LEFT_MASK_ON;}
-  if (sensors[21] || sensors[22] || sensors[23]) {ReportData.HAT = DPAD_RIGHT_MASK_ON;}
+  if (sensors[9] || sensors[10] || sensors[11]) {buttonStatus[BUTTONUP] = true;}
+  else {buttonStatus[BUTTONUP] = false;}
+  if (sensors[13] || sensors[14] || sensors[15]) {buttonStatus[BUTTONDOWN] = true;}
+  else {buttonStatus[BUTTONDOWN] = false;}
+  if (sensors[17] || sensors[18] || sensors[19]) {buttonStatus[BUTTONLEFT] = true;}
+  else {buttonStatus[BUTTONLEFT] = false;}
+  if (sensors[21] || sensors[22] || sensors[23]) {buttonStatus[BUTTONRIGHT] = true;}
+  else {buttonStatus[BUTTONRIGHT] = false;}
 
   // LEDS
+  for (CRGB &led : leds){
+        led = CRGB::Black;
+        }
   leds[0] = leds[1] = leds[2] = leds[29] = leds[30] = leds[31] = CRGB::Blue; // L1 / R1
   leds[3] = leds[4] = leds[5] = leds[26] = leds[27] = leds[28] = CRGB::MediumBlue; // L2 / R2
   leds[6] = leds[25] = CRGB::CRGB::DarkBlue; // L3 / R3
