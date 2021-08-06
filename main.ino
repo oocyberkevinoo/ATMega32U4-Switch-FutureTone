@@ -74,6 +74,7 @@ bool PS4 = false;
 #define NUM_SENSORS 36;
 short sensors[36];
 short sensorsConfirmed[36];
+short sensorsConfirmed2[36];
 bool sensorsTouched[36];
 bool sensorTouched;
 
@@ -91,6 +92,7 @@ typedef enum {
   MENU
 } SliderMode;
 SliderMode sliderMode = GAMEPLAY;
+SliderMode sliderModeChange = GAMEPLAY;
 
 // Slider Key mapping
 int sensorsSwapPS4[3] {0, 1, 2};
@@ -218,8 +220,8 @@ void sensorsInitialization(){
     else
       mpr.proxEnable = MPR_ELEPROX_DISABLED;
 
-      // Sensitivity (default 15 - 10)
-      mpr.setAllThresholds(10, 9, false);
+      // Sensitivity (default 15 - 10) (Optimised 10 - 9)
+      mpr.setAllThresholds(9, 3, false);
 
     // start sensing
     mpr.start(12);
@@ -248,7 +250,17 @@ void loop() {
     buttonRead();
     checkSensors();
     if (switchModePin.fell())
-      sliderMode = MENU;
+      sliderModeChange = MENU;
+      
+      bool swapmode = true;
+      if(sliderMode != sliderModeChange){
+        for (bool sensor : sensors){
+          if(sensor && swapmode)  swapmode = false;
+          }
+      }
+        
+        if(swapmode) sliderMode = sliderModeChange;
+        
     switch(sliderMode)
     {
       case GAMEPLAY: // Slider act like the HORI controller's Slider with Dedicated Controller Mode (For Mega39's / MegaMix / Future Tone (International version not compatible)
@@ -258,7 +270,7 @@ void loop() {
       sliderNavigation();
       break;
       case DEMO: // Slider act as a demo, it does not interract with anything through USB (TO DO)
-      sliderMenu();
+      sliderGameplay();
       break;
       case ARCADE: // Slider act like a Keyboard that you can hook up to Project Diva Arcade Future Tone (TO DO)
       sliderMenu();
@@ -283,9 +295,11 @@ void checkSensors(){
     mpr121 &mpr = mprs[i];
     for (int j = 0; j < numElectrodes; j++) {
       short touching = mpr.readTouchState(j);
-      if(sensorsConfirmed[sensorCount] == touching)
+      if(sensorsConfirmed[sensorCount] == touching && sensorsConfirmed2[sensorCount] == touching)
         sensors[sensorCount] = touching;
-        else
+      else if(sensorsConfirmed[sensorCount] == touching)
+        sensorsConfirmed2[sensorCount] = touching;
+      else
         sensorsConfirmed[sensorCount] = touching;
       
       if(touching)
@@ -340,13 +354,13 @@ void sliderMenu(){
     }
     
     if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]])
-      sliderMode = ARCADE;
+      sliderModeChange = ARCADE;
       else if(sensors[sensorsDemo[0]] || sensors[sensorsDemo[1]] || sensors[sensorsDemo[2]] || sensors[sensorsDemo[3]])
-      sliderMode = DEMO;
+      sliderModeChange = DEMO;
       else if(sensors[sensorsNav[0]] || sensors[sensorsNav[1]] || sensors[sensorsNav[2]] || sensors[sensorsNav[3]])
-      sliderMode = NAVIGATION;
+      sliderModeChange = NAVIGATION;
       else if(sensors[sensorsGame[0]] || sensors[sensorsGame[1]] || sensors[sensorsGame[2]] || sensors[sensorsGame[3]] || sensors[sensorsGame[4]])
-      sliderMode = GAMEPLAY;
+      sliderModeChange = GAMEPLAY;
     
   }
    //LEDS
@@ -422,14 +436,15 @@ if (currentMillis - previousMillis > interval) {
 
   resultBits = sliderBits ^ 0x80808080;
 
-
+  // GAMEPLAY
   // SENDING TO CONTROLLER THE RESULTED VALUES
-  ReportData.RY = (resultBits >> 24) & 0xFF;
-  ReportData.RX = (resultBits >> 16) & 0xFF;
-  ReportData.LY = (resultBits >> 8) & 0xFF;
-  ReportData.LX = (resultBits) & 0xFF;
+  if(sliderMode == GAMEPLAY){
+    ReportData.RY = (resultBits >> 24) & 0xFF;
+    ReportData.RX = (resultBits >> 16) & 0xFF;
+    ReportData.LY = (resultBits >> 8) & 0xFF;
+    ReportData.LX = (resultBits) & 0xFF;
 
-  // LEDS
+    // LEDS
   if(!sensorTouched){
     bool lightUp = true;
       for (CRGB &led : leds){
@@ -463,6 +478,55 @@ if (currentMillis - previousMillis > interval) {
         }
       }
     }
+  }
+  else if(sliderMode == DEMO){
+
+    // KEYS
+    if(sensors[0] || sensors[1] || sensors[2] || sensors[3]) buttonStatus[BUTTONA] = true; else buttonStatus[BUTTONA] = false;
+    if(sensors[4] || sensors[5] || sensors[6] || sensors[7]) buttonStatus[BUTTONB] = true; else buttonStatus[BUTTONB] = false;
+    if(sensors[8] || sensors[9] || sensors[10] || sensors[11]) buttonStatus[BUTTONX] = true; else buttonStatus[BUTTONX] = false;
+    if(sensors[12] || sensors[13] || sensors[14] || sensors[15]) buttonStatus[BUTTONY] = true; else buttonStatus[BUTTONY] = false;
+    if(sensors[16] || sensors[17] || sensors[18] || sensors[19]) buttonStatus[BUTTONRB] = true; else buttonStatus[BUTTONRB] = false;
+    if(sensors[20] || sensors[21] || sensors[22] || sensors[23]) buttonStatus[BUTTONLB] = true; else buttonStatus[BUTTONLB] = false;
+    if(sensors[24] || sensors[25] || sensors[26] || sensors[27]) buttonStatus[BUTTONRT] = true; else buttonStatus[BUTTONRT] = false;
+    if(sensors[28] || sensors[29] || sensors[30] || sensors[31]) buttonStatus[BUTTONLT] = true; else buttonStatus[BUTTONLT] = false;
+    
+    // LEDS
+  if(!sensorTouched){
+    bool lightUp = true;
+      for (CRGB &led : leds){
+        if(lightUp){
+          led = CRGB::White;
+          lightUp = false;
+          }
+          else{
+            lightUp = true;
+            }
+            //led = CRGB::White;
+        }
+  /*}else if(resultBits == noTouchBits){
+    bool lightUp = true;
+      for (CRGB &led : leds){
+        if(lightUp){
+          led = CRGB::White;
+          lightUp = false;
+          }
+          else{
+            lightUp = true;
+            }
+        }*/
+    }else{
+    for (CRGB &led : leds){
+        led = CRGB::Yellow;
+        }
+    for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
+      if(sensors[i]){
+        leds[i] = CRGB::Purple;
+        }
+      }
+    }
+  }
+  
   
   
   }
