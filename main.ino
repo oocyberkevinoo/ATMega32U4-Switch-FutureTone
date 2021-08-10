@@ -70,8 +70,12 @@ bool PS4 = false;
 
 //Slider
 #define NUM_MPRS 3
+#define SLIDER_DEBUG true
+#define ANALOG_OUTPUT true
 #define PROXIMITY_ENABLE false
-#define NUM_SENSORS 36;
+#define NUM_SENSORS 36
+#define MPR_THRESHOLD_TOUCH 12  // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
+#define MPR_THRESHOLD_RELEASE 10
 short sensors[36];
 short sensorsConfirmed[36];
 short sensorsConfirmed2[36];
@@ -81,15 +85,17 @@ bool sensorTouched;
 // create the mpr121 instances
 // these will have addresses set automatically
 mpr121 mprs[NUM_MPRS];
+bool calibrated = false;
 
 
 
 typedef enum {
   GAMEPLAY,
   NAVIGATION,
-  DEMO,
+  CHUNITHM,
   ARCADE,
-  MENU
+  MENU,
+  CALIBRATE
 } SliderMode;
 SliderMode sliderMode = GAMEPLAY;
 SliderMode sliderModeChange = GAMEPLAY;
@@ -220,14 +226,32 @@ void sensorsInitialization(){
     else
       mpr.proxEnable = MPR_ELEPROX_DISABLED;
 
-      // Sensitivity (default 15 - 10) (Optimised 10 - 9)
-      mpr.setAllThresholds(9, 3, false);
+      // Adjusting...
+      mpr.FFI = MPR_FFI_10;
+      mpr.SFI = MPR_SFI_6;
+
+      // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
+      mpr.setAllThresholds(MPR_THRESHOLD_TOUCH, MPR_THRESHOLD_RELEASE, false);
 
     // start sensing
     mpr.start(12);
+
   
   }
 }
+
+void calibrateSensors(){
+    leds[0] = CRGB::White;
+    leds[1] = CRGB::White;
+    leds[2] = CRGB::White;
+    calibrated = false;
+    for (int i = 0; i < NUM_MPRS; i++) {
+      mpr121 &mpr = mprs[i];
+      mpr.softReset();
+    }
+    sliderModeChange = GAMEPLAY;
+    sensorsInitialization();
+  }
 
 void ledsInitialization(){
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS_PER_STRIP);
@@ -269,7 +293,7 @@ void loop() {
       case NAVIGATION: // Slider act like a controller with navigations buttons if you lack of buttons on your controller (customize the code below)
       sliderNavigation();
       break;
-      case DEMO: // Slider act as a demo, it does not interract with anything through USB (TO DO)
+      case CHUNITHM: // Slider CHUNITHM 8 KEYS
       sliderGameplay();
       break;
       case ARCADE: // Slider act like a Keyboard that you can hook up to Project Diva Arcade Future Tone (TO DO)
@@ -277,6 +301,10 @@ void loop() {
       break;
       case MENU: // Slider is in the menu selection mode
       sliderMenu();
+      break;
+      case CALIBRATE: // Calibrate slider
+      calibrateSensors();
+      break;
     }
     //checkModeChange();
     processButtons();
@@ -284,7 +312,11 @@ void loop() {
     // We also need to run the main USB management task.
     USB_USBTask();
     FastLED.show();
+
+    
 }
+
+
 
 void checkSensors(){
   int numElectrodes = 12;
@@ -295,17 +327,31 @@ void checkSensors(){
     mpr121 &mpr = mprs[i];
     for (int j = 0; j < numElectrodes; j++) {
       short touching = mpr.readTouchState(j);
-      if(sensorsConfirmed[sensorCount] == touching && sensorsConfirmed2[sensorCount] == touching)
+      //sensors[sensorCount] = touching;
+      if(touching){
+        if(sensorsConfirmed[sensorCount] && sensorsConfirmed2[sensorCount])
+          sensors[sensorCount] = touching;
+        else if(sensorsConfirmed[sensorCount])
+          sensorsConfirmed2[sensorCount] = touching;
+        else
+          sensorsConfirmed[sensorCount] = touching;
+      }
+      else{
         sensors[sensorCount] = touching;
-      else if(sensorsConfirmed[sensorCount] == touching)
-        sensorsConfirmed2[sensorCount] = touching;
-      else
         sensorsConfirmed[sensorCount] = touching;
-      
-      if(touching)
-        touchedSensors++;
+        sensorsConfirmed2[sensorCount] = touching;
+        }
+        
+      //if(touching)
+        //touchedSensors++;
       sensorCount++;
     }
+    if(!calibrated){
+      short value = mpr.readElectrodeData(0); 
+      byte baseline = mpr.readElectrodeBaseline(0);
+      value -= ((short)baseline << 2);
+      if(value > 0 && value < 5) calibrated = true;
+      }
   }
 
   // Check if at least one sensor is touched
@@ -326,12 +372,6 @@ bool sensorJustTouched(int x){
 
 
 void sliderMenu(){
-  /*  MENU
-   *  Arcade PC | GREEN(0-3)
-   *  Demo | PINK(9-12)
-   *  Navigation | BLUE(18-21)
-   *  Gameplay | RED(27-32)
-   */
    // Default Stick
   long resultBits;
   int32_t sliderBits = 0;
@@ -344,23 +384,17 @@ void sliderMenu(){
    
     //LOGIC
   if (!buttonStatus[SWITCHMODEPIN])
-  {
-    if((sensorJustTouched(sensorsSwapPS4[0]) || sensorJustTouched(sensorsSwapPS4[1]) || sensorJustTouched(sensorsSwapPS4[2])) && !sensorTouched)
-    {
-      if(PS4)
-        PS4 = false;
-      else
-        PS4 = true;    
-    }
-    
+  {    
     if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]])
       sliderModeChange = ARCADE;
       else if(sensors[sensorsDemo[0]] || sensors[sensorsDemo[1]] || sensors[sensorsDemo[2]] || sensors[sensorsDemo[3]])
-      sliderModeChange = DEMO;
+      sliderModeChange = CHUNITHM;
       else if(sensors[sensorsNav[0]] || sensors[sensorsNav[1]] || sensors[sensorsNav[2]] || sensors[sensorsNav[3]])
       sliderModeChange = NAVIGATION;
       else if(sensors[sensorsGame[0]] || sensors[sensorsGame[1]] || sensors[sensorsGame[2]] || sensors[sensorsGame[3]] || sensors[sensorsGame[4]])
       sliderModeChange = GAMEPLAY;
+      else if(sensors[sensorsSwapPS4[0]] || sensors[sensorsSwapPS4[1]] || sensors[sensorsSwapPS4[2]])
+      sliderModeChange = CALIBRATE;
     
   }
    //LEDS
@@ -384,41 +418,6 @@ void sliderGameplay(){
   long resultBits;
   long noTouchBits;
   int bit_count = 31; // Number of sensors for your slider
-  //  DEBUG
-  //sensors[0] = 0x01;
-  //sensors[7] = 0x01;
-  //sensors[15] = 0x01;
-  //sensors[23] = 0x01;
-  //sensors[31] = 0x01;
-  //sensors[33] = 0x01;
-  
-  /*unsigned long currentMillis = millis();
-
-if (currentMillis - previousMillis > interval) {
- previousMillis = currentMillis;
-
- currentSlide2 = currentSlide1;
- if(right)
- {
-  if(currentSlide1 < 31){
-    currentSlide1++;
-  }
-  else if(currentSlide1 >= 31){
-    right = false;    
-    }
-  }
-  else
-  {
-    if(currentSlide1 > 0)
-    currentSlide1--;
-  else if(currentSlide1 <= 0)
-    right = true;    
-    }
-  
-}
- sensors[currentSlide1] = 0x01;
- sensors[currentSlide2] = 0x01;*/
-  //  END DEBUG
 
   int32_t sliderBits = 0;
   noTouchBits = sliderBits ^ 0x80808080;
@@ -445,7 +444,9 @@ if (currentMillis - previousMillis > interval) {
     ReportData.LX = (resultBits) & 0xFF;
 
     // LEDS
-  if(!sensorTouched){
+    
+  //if(!sensorTouched)
+  if(!calibrated){
     bool lightUp = true;
       for (CRGB &led : leds){
         if(lightUp){
@@ -453,6 +454,7 @@ if (currentMillis - previousMillis > interval) {
           lightUp = false;
           }
           else{
+            led = CRGB::Black;
             lightUp = true;
             }
             //led = CRGB::White;
@@ -479,7 +481,7 @@ if (currentMillis - previousMillis > interval) {
       }
     }
   }
-  else if(sliderMode == DEMO){
+  else if(sliderMode == CHUNITHM){
 
     // KEYS
     if(sensors[0] || sensors[1] || sensors[2] || sensors[3]) buttonStatus[BUTTONA] = true; else buttonStatus[BUTTONA] = false;
@@ -492,14 +494,15 @@ if (currentMillis - previousMillis > interval) {
     if(sensors[28] || sensors[29] || sensors[30] || sensors[31]) buttonStatus[BUTTONLT] = true; else buttonStatus[BUTTONLT] = false;
     
     // LEDS
-  if(!sensorTouched){
+  if(!calibrated){
     bool lightUp = true;
       for (CRGB &led : leds){
         if(lightUp){
-          led = CRGB::White;
+          led = CRGB::Yellow;
           lightUp = false;
           }
           else{
+            led = CRGB::Black;
             lightUp = true;
             }
             //led = CRGB::White;
@@ -522,6 +525,8 @@ if (currentMillis - previousMillis > interval) {
     for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
       if(sensors[i]){
         leds[i] = CRGB::Purple;
+        if(leds[i+1]) leds[i+1] = CRGB::Purple;
+        if(leds[i-1]) leds[i-1] = CRGB::Purple;
         }
       }
     }
