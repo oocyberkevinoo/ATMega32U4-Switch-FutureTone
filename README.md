@@ -2,6 +2,10 @@
 The Slider have been tested now and is working, but need adjustement.
 Use now at your own risk.
 
+Actually I still have issue with my own Slider, but it's not due to code issue.
+You can see the issue here : 
+https://www.youtube.com/watch?v=96qyRrq-JJk
+
 ## Project Diva Controller (Switch)
 
 This repo is a fork from the [fluffymadness/ATMega32U4-Switch-Fightstick repo](https://github.com/fluffymadness/ATMega32U4-Switch-Fightstick)
