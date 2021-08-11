@@ -19,7 +19,7 @@ int currentSlide2 = 0;
 bool buttonStartBefore;
 bool buttonSelectBefore;
 byte buttonStatus[16] = {0};
-int buttonSwitchModeTimer = 100;
+int buttonSwitchModeTimer = 1000;
 
 /*
   0x4000,
@@ -70,12 +70,10 @@ bool PS4 = false;
 
 //Slider
 #define NUM_MPRS 3
-#define SLIDER_DEBUG true
-#define ANALOG_OUTPUT true
 #define PROXIMITY_ENABLE false
 #define NUM_SENSORS 36
-#define MPR_THRESHOLD_TOUCH 12  // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
-#define MPR_THRESHOLD_RELEASE 10
+#define MPR_THRESHOLD_TOUCH 10  // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
+#define MPR_THRESHOLD_RELEASE 8
 short sensors[36];
 short sensorsConfirmed[36];
 short sensorsConfirmed2[36];
@@ -92,6 +90,7 @@ bool calibrated = false;
 typedef enum {
   GAMEPLAY,
   NAVIGATION,
+  NAVIGATION2,
   CHUNITHM,
   ARCADE,
   MENU,
@@ -101,10 +100,10 @@ SliderMode sliderMode = GAMEPLAY;
 SliderMode sliderModeChange = GAMEPLAY;
 
 // Slider Key mapping
-int sensorsSwapPS4[3] {0, 1, 2};
-int sensorsArcade[4] {6, 7, 8, 9};
-int sensorsDemo[4] {13, 14, 15, 16};
-int sensorsNav[4] {20, 21, 22, 23};
+//int sensorsSwapPS4[3] {0, 1, 2};
+int sensorsChunithm[5] {0, 1, 2, 3, 4};
+int sensorsArcade[5] {9, 10, 11, 12, 13};
+int sensorsNav[5] {18, 19, 20, 21, 22};
 int sensorsGame[5] {27, 28, 29, 30, 31};
 
 
@@ -273,8 +272,16 @@ void setup() {
 void loop() {
     buttonRead();
     checkSensors();
-    if (switchModePin.fell())
-      sliderModeChange = MENU;
+    if (switchModePin.fell()){
+        if(sliderMode == MENU){
+          sliderModeChange = CALIBRATE;
+          sliderMode = CALIBRATE;
+        }else{
+          sliderModeChange = MENU;
+          sliderMode = MENU;
+        }
+    }
+
       
       bool swapmode = true;
       if(sliderMode != sliderModeChange){
@@ -291,7 +298,10 @@ void loop() {
       sliderGameplay();
       break;
       case NAVIGATION: // Slider act like a controller with navigations buttons if you lack of buttons on your controller (customize the code below)
-      sliderNavigation();
+      sliderNavigation(0);
+      break;
+      case NAVIGATION2:
+      sliderNavigation(1);
       break;
       case CHUNITHM: // Slider CHUNITHM 8 KEYS
       sliderGameplay();
@@ -385,16 +395,16 @@ void sliderMenu(){
     //LOGIC
   if (!buttonStatus[SWITCHMODEPIN])
   {    
-    if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]])
-      sliderModeChange = ARCADE;
-      else if(sensors[sensorsDemo[0]] || sensors[sensorsDemo[1]] || sensors[sensorsDemo[2]] || sensors[sensorsDemo[3]])
-      sliderModeChange = CHUNITHM;
-      else if(sensors[sensorsNav[0]] || sensors[sensorsNav[1]] || sensors[sensorsNav[2]] || sensors[sensorsNav[3]])
+    if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]] || sensors[sensorsArcade[4]])
+      sliderModeChange = NAVIGATION2;
+      else if(sensors[sensorsNav[0]] || sensors[sensorsNav[1]] || sensors[sensorsNav[2]] || sensors[sensorsNav[3]] || sensors[sensorsNav[4]])
       sliderModeChange = NAVIGATION;
+      else if(sensors[sensorsChunithm[0]] || sensors[sensorsChunithm[1]] || sensors[sensorsChunithm[2]] || sensors[sensorsChunithm[3]] || sensors[sensorsChunithm[4]])
+      sliderModeChange = CHUNITHM;
       else if(sensors[sensorsGame[0]] || sensors[sensorsGame[1]] || sensors[sensorsGame[2]] || sensors[sensorsGame[3]] || sensors[sensorsGame[4]])
       sliderModeChange = GAMEPLAY;
-      else if(sensors[sensorsSwapPS4[0]] || sensors[sensorsSwapPS4[1]] || sensors[sensorsSwapPS4[2]])
-      sliderModeChange = CALIBRATE;
+      //else if(sensors[sensorsSwapPS4[0]] || sensors[sensorsSwapPS4[1]] || sensors[sensorsSwapPS4[2]])
+      //sliderModeChange = MENU;
     
   }
    //LEDS
@@ -402,14 +412,14 @@ for (CRGB &led : leds){
         led = CRGB::Black;
         }
    
-    if(!PS4)
+    /*if(!PS4)
       leds[0] = leds[1] = leds[2] = CRGB::DarkRed;
     else
-      leds[0] = leds[1] = leds[2] = CRGB::Aqua;
+      leds[0] = leds[1] = leds[2] = CRGB::Aqua;*/
       
-    leds[sensorsArcade[0]] = leds[sensorsArcade[1]] = leds[sensorsArcade[2]] = leds[sensorsArcade[3]] = CRGB(0, 255, 153);
-    leds[sensorsDemo[0]] = leds[sensorsDemo[1]] = leds[sensorsDemo[2]] = leds[sensorsDemo[3]] = CRGB(255, 0, 242);
-    leds[sensorsNav[0]] = leds[sensorsNav[1]] = leds[sensorsNav[2]] = leds[sensorsNav[3]] = CRGB(0, 128, 255);
+    leds[sensorsArcade[0]] = leds[sensorsArcade[1]] = leds[sensorsArcade[2]] = leds[sensorsArcade[3]] = leds[sensorsArcade[4]] = CRGB(0, 255, 153);
+    leds[sensorsChunithm[0]] = leds[sensorsChunithm[1]] = leds[sensorsChunithm[2]] = leds[sensorsChunithm[3]] = leds[sensorsChunithm[4]] = CRGB(255, 0, 242);
+    leds[sensorsNav[0]] = leds[sensorsNav[1]] = leds[sensorsNav[2]] = leds[sensorsNav[3]] = leds[sensorsNav[4]] = CRGB(0, 128, 255);
     leds[sensorsGame[0]] = leds[sensorsGame[1]] = leds[sensorsGame[2]] = leds[sensorsGame[3]] = leds[sensorsGame[4]] = CRGB::Red;
 }
 
@@ -536,7 +546,7 @@ void sliderGameplay(){
   
   }
 
-void sliderNavigation(){
+void sliderNavigation(int page){
 
   // Default Stick
   long resultBits;
@@ -547,7 +557,18 @@ void sliderNavigation(){
   ReportData.RX = (resultBits >> 16) & 0xFF;
   ReportData.LY = (resultBits >> 8) & 0xFF;
   ReportData.LX = (resultBits) & 0xFF;
-  
+
+
+  CRGB colorPushed = CRGB::White;
+  CRGB colorL1Btn = CRGB::Blue;
+  CRGB colorR1Btn = CRGB::Blue;
+  CRGB colorL2Btn = CRGB::DarkBlue;
+  CRGB colorR2Btn = CRGB::DarkBlue;
+  CRGB colorUpBtn = CRGB(0, 255, 153);
+  CRGB colorDownBtn = CRGB(0, 128, 255);
+  CRGB colorLeftBtn = CRGB(255, 0, 242);
+  CRGB colorRightBtn = CRGB::Red;
+  CRGB colorShareBtn = CRGB::Cyan;
   // sensors 0-2 & 29-31 : L1 / R1 | Blue
   // sensors 3-5 & 26-28 : L2 / R2 | Darker blue
   // sensors 6 & 25 : L3 / R3 | darkest blue
@@ -555,40 +576,73 @@ void sliderNavigation(){
   // sensors 13-15 : Down | Blue
   // sensors 17-19 : Left | Pink
   // sensors 21-23 : Right | Red
+switch(page){
+  case 0:
+    // Bumpers/Triggers
+    if(sensors[0] || sensors[1] || sensors[2]) {buttonStatus[BUTTONLB] = true;}
+    else {buttonStatus[BUTTONLB] = false;}
+    if(sensors[29] || sensors[30] || sensors[31]) {buttonStatus[BUTTONRB] = true;}
+    else {buttonStatus[BUTTONRB] = false;}
+    if(sensors[3] || sensors[4] || sensors[5]) {buttonStatus[BUTTONLT] = true;}
+    else {buttonStatus[BUTTONLT] = false;}
+    if(sensors[26] || sensors[27] || sensors[28]) {buttonStatus[BUTTONRT] = true;}
+    else {buttonStatus[BUTTONRT] = false;}
+    //if(sensors[6]) {buttonStatus[BUTTONL3] = true;}
+    //if(sensors[25]) {buttonStatus[BUTTONR3] = true;}
+  
+    // DPAD
+    if (sensors[9] || sensors[10] || sensors[11]) {buttonStatus[BUTTONUP] = true;}
+    else {buttonStatus[BUTTONUP] = false;}
+    if (sensors[13] || sensors[14] || sensors[15]) {buttonStatus[BUTTONDOWN] = true;}
+    else {buttonStatus[BUTTONDOWN] = false;}
+    if (sensors[17] || sensors[18] || sensors[19]) {buttonStatus[BUTTONLEFT] = true;}
+    else {buttonStatus[BUTTONLEFT] = false;}
+    if (sensors[21] || sensors[22] || sensors[23]) {buttonStatus[BUTTONRIGHT] = true;}
+    else {buttonStatus[BUTTONRIGHT] = false;}
+  
+    // LEDS
+    if(buttonStatus[BUTTONLB]) colorL1Btn = colorPushed;
+    if(buttonStatus[BUTTONRB]) colorR1Btn = colorPushed;
+    if(buttonStatus[BUTTONLT]) colorL2Btn = colorPushed;
+    if(buttonStatus[BUTTONRT]) colorR2Btn = colorPushed;
+    if(buttonStatus[BUTTONUP]) colorUpBtn = colorPushed;
+    if(buttonStatus[BUTTONDOWN]) colorDownBtn = colorPushed;
+    if(buttonStatus[BUTTONLEFT]) colorLeftBtn = colorPushed;
+    if(buttonStatus[BUTTONRIGHT]) colorRightBtn = colorPushed;
+    
+    for (CRGB &led : leds){
+          led = CRGB::Black;
+          }
+    leds[0] = leds[1] = leds[2] = colorL1Btn;
+    leds[29] = leds[30] = leds[31] = colorR1Btn;
+    leds[3] = leds[4] = leds[5] = colorL2Btn;
+    leds[26] = leds[27] = leds[28] = colorR2Btn;
+    leds[8] = leds[9] = leds[10] = colorUpBtn;
+    leds[12] = leds[13] = leds[14] = colorDownBtn;
+    leds[17] = leds[18] = leds[19] = colorLeftBtn;
+    leds[21] = leds[22] = leds[23] = colorRightBtn;
+  break;
+  case 1:
+  
+    // DPAD
+    if (sensors[9] || sensors[10] || sensors[11]) {buttonStatus[BUTTONSELECT] = true;}
+    else {buttonStatus[BUTTONSELECT] = false;}
+  
+    // LEDS
+    if(buttonStatus[BUTTONSELECT]) colorShareBtn = colorPushed;
 
-  // Bumpers/Triggers
-  if(sensors[0] || sensors[1] || sensors[2]) {buttonStatus[BUTTONLB] = true;}
-  else {buttonStatus[BUTTONLB] = false;}
-  if(sensors[29] || sensors[30] || sensors[31]) {buttonStatus[BUTTONRB] = true;}
-  else {buttonStatus[BUTTONRB] = false;}
-  if(sensors[3] || sensors[4] || sensors[5]) {buttonStatus[BUTTONLT] = true;}
-  else {buttonStatus[BUTTONLT] = false;}
-  if(sensors[26] || sensors[27] || sensors[28]) {buttonStatus[BUTTONRT] = true;}
-  else {buttonStatus[BUTTONRT] = false;}
-  //if(sensors[6]) {buttonStatus[BUTTONL3] = true;}
-  //if(sensors[25]) {buttonStatus[BUTTONR3] = true;}
+    
+    for (CRGB &led : leds){
+          led = CRGB::Black;
+          }
+   
+    leds[8] = leds[9] = leds[10] = colorShareBtn;
 
-  // DPAD
-  if (sensors[9] || sensors[10] || sensors[11]) {buttonStatus[BUTTONUP] = true;}
-  else {buttonStatus[BUTTONUP] = false;}
-  if (sensors[13] || sensors[14] || sensors[15]) {buttonStatus[BUTTONDOWN] = true;}
-  else {buttonStatus[BUTTONDOWN] = false;}
-  if (sensors[17] || sensors[18] || sensors[19]) {buttonStatus[BUTTONLEFT] = true;}
-  else {buttonStatus[BUTTONLEFT] = false;}
-  if (sensors[21] || sensors[22] || sensors[23]) {buttonStatus[BUTTONRIGHT] = true;}
-  else {buttonStatus[BUTTONRIGHT] = false;}
+  break;
+  }
 
-  // LEDS
-  for (CRGB &led : leds){
-        led = CRGB::Black;
-        }
-  leds[0] = leds[1] = leds[2] = leds[29] = leds[30] = leds[31] = CRGB::Blue; // L1 / R1
-  leds[3] = leds[4] = leds[5] = leds[26] = leds[27] = leds[28] = CRGB::MediumBlue; // L2 / R2
-  leds[6] = leds[25] = CRGB::CRGB::DarkBlue; // L3 / R3
-  leds[8] = leds[9] = leds[10] = CRGB(0, 255, 153); // UP
-  leds[12] = leds[13] = leds[14] = CRGB(0, 128, 255); // DOWN
-  leds[17] = leds[18] = leds[19] = CRGB(255, 0, 242); // LEFT
-  leds[21] = leds[22] = leds[23] = CRGB::Red; // RIGHT
+
+  
   
 
   
