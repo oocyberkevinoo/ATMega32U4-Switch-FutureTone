@@ -5,16 +5,17 @@
 #include "Joystick.h"
 #define BOUNCE_WITH_PROMPT_DETECTION
 #include <Bounce2.h>
+#include <EEPROM.h>
 
 #define MILLIDEBOUNCE 1 //Debounce time in milliseconds
 
 //Debug Timer
-
 unsigned long previousMillis = 0;
 unsigned long interval = 30;
 bool right = true;
 int currentSlide1 = 0;
 int currentSlide2 = 0;
+int settingsSelection;
 
 bool buttonStartBefore;
 bool buttonSelectBefore;
@@ -72,8 +73,8 @@ bool PS4 = false;
 #define NUM_MPRS 3
 #define PROXIMITY_ENABLE false
 #define NUM_SENSORS 36
-#define MPR_THRESHOLD_TOUCH 10  // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
-#define MPR_THRESHOLD_RELEASE 8
+#define MPR_THRESHOLD_TOUCH 12  // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
+#define MPR_THRESHOLD_RELEASE 10
 short sensors[36];
 short sensorsConfirmed[36];
 short sensorsConfirmed2[36];
@@ -94,6 +95,7 @@ typedef enum {
   CHUNITHM,
   ARCADE,
   MENU,
+  SETTINGS,
   CALIBRATE
 } SliderMode;
 SliderMode sliderMode = GAMEPLAY;
@@ -106,6 +108,13 @@ int sensorsArcade[5] {9, 10, 11, 12, 13};
 int sensorsNav[5] {18, 19, 20, 21, 22};
 int sensorsGame[5] {27, 28, 29, 30, 31};
 
+// Slider Settings
+bool pushedSettings1 = false;
+bool pushedSettings2 = false;
+bool pushedSettings3 = false;
+bool pushedSettings4 = false;
+byte sliderFilter1 = 0x00;
+byte sliderFilter2 = 0x00;
 
 
 // LEDs
@@ -204,7 +213,7 @@ void setupPins(){
 }
 
 void sensorsInitialization(){
-  
+
     for (int i = 0; i < NUM_MPRS; i++) {
     // this special line makes `mpr` the same as typing `mprs[i]`
     mpr121 &mpr = mprs[i];
@@ -224,13 +233,25 @@ void sensorsInitialization(){
       mpr.proxEnable = MPR_ELEPROX_0_TO_11;
     else
       mpr.proxEnable = MPR_ELEPROX_DISABLED;
-
-      // Adjusting...
+  
+    
+    // Adjusting...
+    switch(sliderFilter1){
+      default:
       mpr.FFI = MPR_FFI_10;
       mpr.SFI = MPR_SFI_6;
+      break;
+      case 0x01:
+      mpr.FFI = MPR_FFI_18;
+      mpr.SFI = MPR_SFI_10;
+      break;
+      case 0x02:
+      break;
+      }
 
-      // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
-      mpr.setAllThresholds(MPR_THRESHOLD_TOUCH, MPR_THRESHOLD_RELEASE, false);
+    int sensitivityLoaded = SensitivityLoad();
+    // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
+    mpr.setAllThresholds(sensitivityLoaded, sensitivityLoaded-2, false);
 
     // start sensing
     mpr.start(12);
@@ -254,10 +275,17 @@ void calibrateSensors(){
 
 void ledsInitialization(){
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS_PER_STRIP);
+  FastLED.setBrightness(LEDBrightnessLoad());
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 400);
   }
 
+void settingsLoader(){
+  sliderFilter1 = EEPROM.read(2);
+  sliderFilter2 = EEPROM.read(3);
+  }
+
 void setup() {
+  settingsLoader();
   sensorsInitialization();
   buttonStartBefore = false;
   buttonSelectBefore = false;
@@ -265,7 +293,6 @@ void setup() {
   ledsInitialization();
   SetupHardware();
   GlobalInterruptEnable();
-  
 }
 
 
@@ -312,6 +339,9 @@ void loop() {
       case MENU: // Slider is in the menu selection mode
       sliderMenu();
       break;
+      case SETTINGS: // Slider settings
+      sliderSettings();
+      break;
       case CALIBRATE: // Calibrate slider
       calibrateSensors();
       break;
@@ -326,6 +356,58 @@ void loop() {
     
 }
 
+int LEDBrightnessLoad(){
+  switch(EEPROM.read(0))
+    {
+    case 0x00:
+    return 255;
+    break;
+    case 0x01:
+    return 200;
+    break;
+    case 0x02:
+    return 155;
+    break;
+    case 0x03:
+    return 100;
+    break;
+    case 0x04:
+    return 50;
+    break;
+    case 0x05:
+    return 25;
+    break;
+    case 0x06:
+    return 10;
+    break;
+    default:
+    return 255;
+    
+    }
+  }
+
+int SensitivityLoad(){
+  switch(EEPROM.read(1)){
+    case 0x00:
+    return 12;
+    break;
+    case 0x01:
+    return 10;
+    break;
+    case 0x02:
+    return 8;
+    break;
+    case 0x03:
+    return 6;
+    break;
+    case 0x04:
+    return 14;
+    break;
+    default:
+    return 12;
+    }
+  }
+  
 
 
 void checkSensors(){
@@ -337,6 +419,39 @@ void checkSensors(){
     mpr121 &mpr = mprs[i];
     for (int j = 0; j < numElectrodes; j++) {
       short touching = mpr.readTouchState(j);
+      switch(sliderFilter2){
+        default:
+          if(touching){
+          if(sensorsConfirmed[sensorCount] && sensorsConfirmed2[sensorCount])
+            sensors[sensorCount] = touching;
+          else if(sensorsConfirmed[sensorCount])
+            sensorsConfirmed2[sensorCount] = touching;
+          else
+            sensorsConfirmed[sensorCount] = touching;
+          }
+          else{
+            sensors[sensorCount] = touching;
+            sensorsConfirmed[sensorCount] = touching;
+            sensorsConfirmed2[sensorCount] = touching;
+            }
+        break;
+        case 0x01:
+          if(touching){
+          if(sensorsConfirmed[sensorCount])
+            sensors[sensorCount] = touching;
+          else
+            sensorsConfirmed[sensorCount] = touching;
+          }
+          else{
+            sensors[sensorCount] = touching;
+            sensorsConfirmed[sensorCount] = touching;
+            }
+        break;
+        case 0x02:
+          sensors[sensorCount] = touching;
+        break;
+          
+        }
       //sensors[sensorCount] = touching;
       if(touching){
         if(sensorsConfirmed[sensorCount] && sensorsConfirmed2[sensorCount])
@@ -396,7 +511,7 @@ void sliderMenu(){
   if (!buttonStatus[SWITCHMODEPIN])
   {    
     if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]] || sensors[sensorsArcade[4]])
-      sliderModeChange = NAVIGATION2;
+      sliderModeChange = SETTINGS;
       else if(sensors[sensorsNav[0]] || sensors[sensorsNav[1]] || sensors[sensorsNav[2]] || sensors[sensorsNav[3]] || sensors[sensorsNav[4]])
       sliderModeChange = NAVIGATION;
       else if(sensors[sensorsChunithm[0]] || sensors[sensorsChunithm[1]] || sensors[sensorsChunithm[2]] || sensors[sensorsChunithm[3]] || sensors[sensorsChunithm[4]])
@@ -411,7 +526,6 @@ void sliderMenu(){
 for (CRGB &led : leds){
         led = CRGB::Black;
         }
-   
     /*if(!PS4)
       leds[0] = leds[1] = leds[2] = CRGB::DarkRed;
     else
@@ -560,8 +674,8 @@ void sliderNavigation(int page){
 
 
   CRGB colorPushed = CRGB::White;
-  CRGB colorL1Btn = CRGB::Blue;
-  CRGB colorR1Btn = CRGB::Blue;
+  CRGB colorL1Btn = CRGB::LightBlue;
+  CRGB colorR1Btn = CRGB::LightBlue;
   CRGB colorL2Btn = CRGB::DarkBlue;
   CRGB colorR2Btn = CRGB::DarkBlue;
   CRGB colorUpBtn = CRGB(0, 255, 153);
@@ -640,14 +754,125 @@ switch(page){
 
   break;
   }
+}
 
+void sliderSettings(){
 
+  // Default Stick
+  long resultBits;
+  int32_t sliderBits = 0;
+  resultBits = sliderBits ^ 0x80808080;
+  // SENDING TO CONTROLLER THE RESULTED VALUES
+  ReportData.RY = (resultBits >> 24) & 0xFF;
+  ReportData.RX = (resultBits >> 16) & 0xFF;
+  ReportData.LY = (resultBits >> 8) & 0xFF;
+  ReportData.LX = (resultBits) & 0xFF;
   
   
-
+  // LED's Brightness
+  if(sensors[0] || sensors[1] || sensors[2]) { 
+    if(!pushedSettings1)
+      pushedSettings1 = true;
+    }
+  else if(pushedSettings1){
+    updateSettings(0, 0x06);
+    FastLED.setBrightness(LEDBrightnessLoad());
+    pushedSettings1 = false;
+    } 
   
+  // Sensitivity of Slider
+  if(sensors[4] || sensors[5] || sensors[6]) { 
+    if(!pushedSettings2)
+      pushedSettings2 = true;
+    }
+  else if(pushedSettings2){
+    updateSettings(1, 0x04);
+    pushedSettings2 = false;
+    } 
+
+    // Slider Filter 1
+  if(sensors[13] || sensors[14] || sensors[15]) { 
+    if(!pushedSettings3)
+      pushedSettings3 = true;
+    }
+  else if(pushedSettings3){
+    updateSettings(2, 0x02);
+    settingsLoader();
+    pushedSettings3 = false;
+    } 
+
+    // Slider Filter 2 (custom filter)
+  if(sensors[16] || sensors[17] || sensors[18]) { 
+    if(!pushedSettings4)
+      pushedSettings4 = true;
+    }
+  else if(pushedSettings4){
+    updateSettings(3, 0x02);
+    settingsLoader();
+    pushedSettings4 = false;
+    } 
+
+
+
+  // LEDS
+  for (CRGB &led : leds){
+        led = CRGB::Black;
+        }
+  leds[0] = leds[1] = leds[2] = CRGB::Red;
+  leds[4] = leds[5] = leds[6] = CRGB::Blue;
+  switch(EEPROM.read(1)){
+    case 0x00:
+    leds[7] = CRGB::Orange;
+    break;
+    case 0x01:
+    leds[7] = CRGB::Yellow;
+    break;
+    case 0x02:
+    leds[7] = CRGB::Green;
+    break;
+    case 0x03:
+    leds[7] = CRGB::White;
+    break;
+    case 0x04:
+    leds[7] = CRGB::Red;
+    break;
+    default: leds[7] = CRGB::Orange;
   }
+  switch(EEPROM.read(2)){
+    case 0x00:
+    leds[13] = leds[14] = leds[15] = CRGB::Yellow;
+    break;
+    case 0x01:
+    leds[13] = leds[14] = leds[15] = CRGB::Red;
+    break;
+    case 0x02:
+    leds[13] = leds[14] = leds[15] = CRGB::Green;
+    break;
+    default: leds[13] = leds[14] = leds[15] = CRGB::Yellow;
+  }
+  switch(EEPROM.read(3)){
+    case 0x00:
+    leds[16] = leds[17] = leds[18] = CRGB::Red;
+    break;
+    case 0x01:
+    leds[16] = leds[17] = leds[18] = CRGB::Yellow;
+    break;
+    case 0x02:
+    leds[16] = leds[17] = leds[18] = CRGB::Green;
+    break;
+    default: leds[16] = leds[17] = leds[18] = CRGB::Red;
+  }
+  
+}
 
+void updateSettings(int index, byte quantity){
+  byte temp = EEPROM.read(index);
+    if(temp < quantity)
+      temp++;
+    else
+      temp = 0x00;
+    EEPROM.write(index, temp);
+  }
 
 void buttonRead()
 {
@@ -783,24 +1008,3 @@ void buttonProcessingSmash(){
   if (buttonStatus[BUTTONSELECT]){ReportData.Button |= SELECT_MASK_ON;}
   if (buttonStatus[BUTTONHOME]){ReportData.Button |= HOME_MASK_ON;}
 }
-
-/*bool testBoolArray(bool[] boolArray, bool any = false){
-  if(!any){
-    int boolTrue = 0;
-    for(bool val : boolArray){
-            if(val)
-              boolTrue++;
-      }
-      if(boolTrue >= (sizeof(boolArray)/sizeof(boolArray[0]))
-        return true;
-      else
-        return false;  
-    }
-    else{
-      for(bool val : boolArray){
-            if(val)
-              return true;
-      }
-      return false;
-      }
-  }*/
