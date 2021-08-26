@@ -3,32 +3,24 @@
 #include "LUFAConfig.h"
 #include <LUFA.h>
 #include "Joystick.h"
-#define BOUNCE_WITH_PROMPT_DETECTION
 #include <Bounce2.h>
 #include <EEPROM.h>
 
+#define BOUNCE_WITH_PROMPT_DETECTION
 #define MILLIDEBOUNCE 1 //Debounce time in milliseconds
 
 //Debug Timer
 unsigned long previousMillis = 0;
 unsigned long interval = 30;
-bool right = true;
-int currentSlide1 = 0;
-int currentSlide2 = 0;
-int settingsSelection;
 
-bool buttonStartBefore;
-bool buttonSelectBefore;
+// Buttons values
 byte buttonStatus[16] = {0};
 int buttonSwitchModeTimer = 1000;
 
-/*
-  0x4000,
-  0x8000,*/
+// DEFINE buttons addresses
 #define CAPTURE_MASK_ON 0x2000
 #define R3_MASK_ON 0x800
 #define L3_MASK_ON 0x400
- 
 #define DPAD_UP_MASK_ON 0x00
 #define DPAD_UPRIGHT_MASK_ON 0x01
 #define DPAD_RIGHT_MASK_ON 0x02
@@ -50,6 +42,7 @@ int buttonSwitchModeTimer = 1000;
 #define SELECT_MASK_ON 0x100
 #define HOME_MASK_ON 0x1000
 
+// DEFINE buttons index
 #define BUTTONUP 0
 #define BUTTONDOWN 1
 #define BUTTONLEFT 2
@@ -67,27 +60,31 @@ int buttonSwitchModeTimer = 1000;
 #define BUTTONHOME 14
 #define SWITCHMODEPIN 15
 
+// Is it in PS4 mode (Not available for now, should use a converter for PS4 for now, that ensure correct analog datas... See my git ReadMe for more informations)
 bool PS4 = false;
 
-//Slider
-#define NUM_MPRS 3
-#define PROXIMITY_ENABLE false
-#define NUM_SENSORS 36
-#define MPR_THRESHOLD_TOUCH 12  // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
-#define MPR_THRESHOLD_RELEASE 10
-short sensors[36];
-short sensorsConfirmed[36];
-short sensorsConfirmed2[36];
-bool sensorsTouched[36];
+// DEFINE Slider
+#define NUM_MPRS 3                // Number of MPRs
+#define PROXIMITY_ENABLE false    // Proximity check (not needed)
+#define NUM_SENSORS 36            // Number of TOTAL sensors
+#define MPR_THRESHOLD_TOUCH 12    // Default Touch Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
+#define MPR_THRESHOLD_RELEASE 10  // Default Release Sensitivity (2~4 behind the touch one)
+
+// Initialise arrays for sensors...
+short sensors[NUM_SENSORS];             
+short sensorsConfirmed[NUM_SENSORS];
+short sensorsConfirmed2[NUM_SENSORS];
+bool sensorsTouched[NUM_SENSORS];
 bool sensorTouched;
 
 // create the mpr121 instances
 // these will have addresses set automatically
 mpr121 mprs[NUM_MPRS];
+
+// Calibration asked on boot
 bool calibrated = false;
 
-
-
+// Slider MODES list
 typedef enum {
   GAMEPLAY,
   NAVIGATION,
@@ -98,23 +95,25 @@ typedef enum {
   SETTINGS,
   CALIBRATE
 } SliderMode;
-SliderMode sliderMode = GAMEPLAY;
-SliderMode sliderModeChange = GAMEPLAY;
+SliderMode sliderMode = GAMEPLAY;       // Default mode is GAMEPLAY
+SliderMode sliderModeChange = GAMEPLAY; // Transition mode, change it to change mode on button release correctly
 
-// Slider Key mapping
+// Slider Key mapping (What sensors do what)
 //int sensorsSwapPS4[3] {0, 1, 2};
 int sensorsChunithm[5] {0, 1, 2, 3, 4};
 int sensorsArcade[5] {9, 10, 11, 12, 13};
 int sensorsNav[5] {18, 19, 20, 21, 22};
 int sensorsGame[5] {27, 28, 29, 30, 31};
 
-// Slider Settings
+// Slider Settings values
 bool pushedSettings1 = false;
 bool pushedSettings2 = false;
 bool pushedSettings3 = false;
 bool pushedSettings4 = false;
+bool pushedSettings5 = false;
 byte sliderFilter1 = 0x00;
 byte sliderFilter2 = 0x00;
+byte sliderOffsetRelease = 0x00;
 
 
 // LEDs
@@ -125,7 +124,7 @@ byte sliderFilter2 = 0x00;
 CRGB leds[NUM_LEDS_PER_STRIP];
 //bool idleLeds = true;
 
-
+// BOUNCE BUTTONS
 Bounce joystickUP = Bounce();
 Bounce joystickDOWN = Bounce();
 Bounce joystickLEFT = Bounce();
@@ -144,40 +143,16 @@ Bounce buttonHOME = Bounce();
 Bounce switchModePin = Bounce();
 
 typedef enum {
-  ANALOG_MODE,
   DIGITAL,
-  SMASH
 } State_t;
 State_t state = DIGITAL;
 
-void checkModeChange(){
-   if (buttonStatus[BUTTONSTART] && buttonStatus[BUTTONSELECT]){
-    if(buttonStartBefore == 0 && buttonSelectBefore ==0){
-        switch(state)
-        {
-           case DIGITAL:
-              state=ANALOG_MODE;
-           break;
-
-           case ANALOG_MODE:
-              state=SMASH;
-           break;
-
-           case SMASH:
-              state=DIGITAL;
-           break;
-        }
-        buttonStartBefore = 1;
-        buttonSelectBefore = 1;
-    }
-  }
-  else {buttonSelectBefore = 0;buttonStartBefore = 0;}
-}
+// Buttons pins setup
 void setupPins(){
   //  You'll not have enough pins on a Pro Micro, please change the pins to the correspondig one.
   //  You can use Navgation mode of the Slider to have virtual buttons.
-    joystickUP.attach(255,INPUT_PULLUP);
-    joystickDOWN.attach(255,INPUT_PULLUP);
+    joystickUP.attach(255,INPUT_PULLUP);    // Unused
+    joystickDOWN.attach(255,INPUT_PULLUP);  // Unsued
     joystickLEFT.attach(1,INPUT_PULLUP);
     joystickRIGHT.attach(0,INPUT_PULLUP);
     buttonA.attach(4,INPUT_PULLUP);
@@ -212,6 +187,7 @@ void setupPins(){
     
 }
 
+// Initialise the MPR121s on boot or calibration
 void sensorsInitialization(){
 
     for (int i = 0; i < NUM_MPRS; i++) {
@@ -235,7 +211,7 @@ void sensorsInitialization(){
       mpr.proxEnable = MPR_ELEPROX_DISABLED;
   
     
-    // Adjusting...
+    // Setting up the MPR121's filters...
     switch(sliderFilter1){
       default:
       mpr.FFI = MPR_FFI_10;
@@ -249,29 +225,17 @@ void sensorsInitialization(){
       break;
       }
 
-    int sensitivityLoaded = SensitivityLoad();
+    // Setting up the MPR121's sensitivity...
+    int _sensitivity = SensitivityLoad();
+    int _ReleaseThresholdOffset = ReleaseThresholdOffsetLoad();
     // Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
-    mpr.setAllThresholds(sensitivityLoaded, sensitivityLoaded-2, false);
+    mpr.setAllThresholds(_sensitivity, _sensitivity-(_ReleaseThresholdOffset), false);
 
     // start sensing
     mpr.start(12);
 
-  
   }
 }
-
-void calibrateSensors(){
-    leds[0] = CRGB::White;
-    leds[1] = CRGB::White;
-    leds[2] = CRGB::White;
-    calibrated = false;
-    for (int i = 0; i < NUM_MPRS; i++) {
-      mpr121 &mpr = mprs[i];
-      mpr.softReset();
-    }
-    sliderModeChange = GAMEPLAY;
-    sensorsInitialization();
-  }
 
 void ledsInitialization(){
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS_PER_STRIP);
@@ -279,28 +243,28 @@ void ledsInitialization(){
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 400);
   }
 
-void settingsLoader(){
+void settingsLoader(){ // Load settings from EEPROM that need fast load
   sliderFilter1 = EEPROM.read(2);
   sliderFilter2 = EEPROM.read(3);
   }
+  
 
+//Arduino Setup Process...
 void setup() {
-  settingsLoader();
-  sensorsInitialization();
-  buttonStartBefore = false;
-  buttonSelectBefore = false;
-  setupPins();
-  ledsInitialization();
-  SetupHardware();
+  settingsLoader();             // Load settings from EEPROM that need fast load...
+  sensorsInitialization();      // Initialise MPR121s...
+  setupPins();                  // Setup Arduino Pins...
+  ledsInitialization();         // Initialise Leds...
+  SetupHardware();              // Setup Hardware...
   GlobalInterruptEnable();
 }
 
-
+// Arduino Loop process...
 void loop() {
-    buttonRead();
-    checkSensors();
-    if (switchModePin.fell()){
-        if(sliderMode == MENU){
+    buttonRead();   // Buttons state
+    checkSensors(); // Sensors state
+    if (switchModePin.fell()){  // MENU mode button is pressed...
+        if(sliderMode == MENU){ // If already in MENU mode, change to CALIBRATE mode...
           sliderModeChange = CALIBRATE;
           sliderMode = CALIBRATE;
         }else{
@@ -308,18 +272,17 @@ void loop() {
           sliderMode = MENU;
         }
     }
-
-      
-      bool swapmode = true;
-      if(sliderMode != sliderModeChange){
-        for (bool sensor : sensors){
-          if(sensor && swapmode)  swapmode = false;
-          }
-      }
+    // Change mode on release only. (avoid false positive inputs in the new selected mode)
+    bool swapmode = true;
+    if(sliderMode != sliderModeChange){
+      for (bool sensor : sensors){
+        if(sensor && swapmode)  swapmode = false;
+        }
+    }
         
         if(swapmode) sliderMode = sliderModeChange;
         
-    switch(sliderMode)
+    switch(sliderMode) // Change the SLider Mode...
     {
       case GAMEPLAY: // Slider act like the HORI controller's Slider with Dedicated Controller Mode (For Mega39's / MegaMix / Future Tone (International version not compatible)
       sliderGameplay();
@@ -327,7 +290,7 @@ void loop() {
       case NAVIGATION: // Slider act like a controller with navigations buttons if you lack of buttons on your controller (customize the code below)
       sliderNavigation(0);
       break;
-      case NAVIGATION2:
+      case NAVIGATION2: // Page 2, unused.
       sliderNavigation(1);
       break;
       case CHUNITHM: // Slider CHUNITHM 8 KEYS
@@ -346,7 +309,8 @@ void loop() {
       calibrateSensors();
       break;
     }
-    //checkModeChange();
+
+    // Processing controller state...
     processButtons();
     HID_Task();
     // We also need to run the main USB management task.
@@ -356,7 +320,25 @@ void loop() {
     
 }
 
-int LEDBrightnessLoad(){
+// CALIBRATE MODE
+void calibrateSensors(){  
+    leds[0] = CRGB::White;
+    leds[1] = CRGB::White;
+    leds[2] = CRGB::White;
+    calibrated = false;
+    for (int i = 0; i < NUM_MPRS; i++) {
+      mpr121 &mpr = mprs[i];
+      mpr.softReset();
+    }
+    sliderModeChange = GAMEPLAY;
+    sensorsInitialization();
+  }
+
+/*
+ * SETTINGS LOADER
+ */
+
+int LEDBrightnessLoad(){  // LEDs brightness level
   switch(EEPROM.read(0))
     {
     case 0x00:
@@ -386,41 +368,74 @@ int LEDBrightnessLoad(){
     }
   }
 
-int SensitivityLoad(){
+int SensitivityLoad(){  // Sensitivity of sensors
   switch(EEPROM.read(1)){
     case 0x00:
-    return 12;
+    return 15;
     break;
     case 0x01:
-    return 10;
-    break;
-    case 0x02:
-    return 8;
-    break;
-    case 0x03:
-    return 6;
-    break;
-    case 0x04:
     return 14;
     break;
-    default:
+    case 0x02:
+    return 13;
+    break;
+    case 0x03:
     return 12;
+    break;
+    case 0x04:
+    return 11;
+    break;
+    case 0x05:
+    return 10;
+    break;
+    case 0x06:
+    return 16;
+    break;
+    default:
+    return 14;
     }
   }
+
+  int ReleaseThresholdOffsetLoad(){ // Offset Release
+    switch(EEPROM.read(4)){
+      case 0x00:
+      return 4;
+      break;
+      case 0x01:
+      return 3;
+      break;
+      case 0x02:
+      return 2;
+      break;
+      case 0x03:
+      return 1;
+      break;
+      case 0x04:
+      return 0;
+      break;
+      default:
+      return 2;
+      }
+    }
+
+/*
+ * SLIDER ENGINE
+ */
   
 
-
+// Manage the output of the Slider sensors
 void checkSensors(){
-  int numElectrodes = 12;
-  int sensorCount = 0;
-  int touchedSensors = 0;
+  int numElectrodes = 12; // How many electrodes/sensors by MPR121 ?
+  int sensorCount = 0;    // What sensor are we actually working on ?
+  int touchedSensors = 0; // How many sensors confirmed to be touched ?
   
-  for (int i = 0; i < NUM_MPRS; i++) {
+  for (int i = 0; i < NUM_MPRS; i++) { // Checking each MPR...
     mpr121 &mpr = mprs[i];
-    for (int j = 0; j < numElectrodes; j++) {
-      short touching = mpr.readTouchState(j);
-      switch(sliderFilter2){
-        default:
+    for (int j = 0; j < numElectrodes; j++) { // Checking each sensor...
+      short touching = mpr.readTouchState(j); // Is it touched ?...
+      // CUSTOM FILTER...
+      switch(sliderFilter2){  
+        default:      // Filter Level 2: Double check... (Bigest latency, best stability...)
           if(touching){
           if(sensorsConfirmed[sensorCount] && sensorsConfirmed2[sensorCount])
             sensors[sensorCount] = touching;
@@ -435,7 +450,7 @@ void checkSensors(){
             sensorsConfirmed2[sensorCount] = touching;
             }
         break;
-        case 0x01:
+        case 0x01:    // Filter Level 1: Single Check... (Almost no latency, some stability...)
           if(touching){
           if(sensorsConfirmed[sensorCount])
             sensors[sensorCount] = touching;
@@ -447,12 +462,13 @@ void checkSensors(){
             sensorsConfirmed[sensorCount] = touching;
             }
         break;
-        case 0x02:
+        case 0x02:    // Filter Level 0: No Check... (No latency, stability depend only on sensitivity and MPR filters...)
           sensors[sensorCount] = touching;
         break;
           
         }
-      //sensors[sensorCount] = touching;
+
+        // So, sensor is touched...?
       if(touching){
         if(sensorsConfirmed[sensorCount] && sensorsConfirmed2[sensorCount])
           sensors[sensorCount] = touching;
@@ -461,31 +477,39 @@ void checkSensors(){
         else
           sensorsConfirmed[sensorCount] = touching;
       }
-      else{
+      else{ // if not, all custom filters memory are reset...
         sensors[sensorCount] = touching;
         sensorsConfirmed[sensorCount] = touching;
         sensorsConfirmed2[sensorCount] = touching;
         }
-        
-      //if(touching)
-        //touchedSensors++;
+
+        // How many sensors touched ? (not used)
+      if(touching)
+        touchedSensors++;
+      else if(touchedSensors > 0)
+        touchedSensors--;
+
+      // Next sensor...
       sensorCount++;
     }
+    // CALIBRATION PROCESS IF ASKED OR NEEDED ON BOOT... (calibration results based on the first sensor...)
     if(!calibrated){
       short value = mpr.readElectrodeData(0); 
       byte baseline = mpr.readElectrodeBaseline(0);
       value -= ((short)baseline << 2);
-      if(value > 0 && value < 5) calibrated = true;
+      if(value > 0 && value < 5) 
+        calibrated = true;
       }
   }
 
-  // Check if at least one sensor is touched
+  // Check if at least one sensor is touched (not used)
   if(touchedSensors > 0){
     sensorTouched = true;
     }
     
 }
 
+// Is a sensor has been just touched ? (Unused)
 bool sensorJustTouched(int x){
   if(sensors[x] && !sensorsTouched[x])
     {
@@ -496,8 +520,9 @@ bool sensorJustTouched(int x){
   }
 
 
+// Slider Menu to change the mode the Slider is currently on.
 void sliderMenu(){
-   // Default Stick
+   // output Default Stick values to not trigger false positive in game
   long resultBits;
   int32_t sliderBits = 0;
   resultBits = sliderBits ^ 0x80808080;
@@ -506,8 +531,10 @@ void sliderMenu(){
   ReportData.RX = (resultBits >> 16) & 0xFF;
   ReportData.LY = (resultBits >> 8) & 0xFF;
   ReportData.LX = (resultBits) & 0xFF;
+
+  
    
-    //LOGIC
+    //Virtual Buttons of menu
   if (!buttonStatus[SWITCHMODEPIN])
   {    
     if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]] || sensors[sensorsArcade[4]])
@@ -538,6 +565,7 @@ for (CRGB &led : leds){
 }
 
 
+// Slider Gameplay Engine (can be used for all sort of Slider/Touchpad mechanics based games.)
 void sliderGameplay(){
   long resultBits;
   long noTouchBits;
@@ -549,27 +577,23 @@ void sliderGameplay(){
   {
     if(bit_count >= 0){
     // Check current Sensor state here
-    //if((sensor & 0x8000) != 0)
     if(sensor)
-      sliderBits |= (1l << bit_count);
-
+      sliderBits |= (1l << bit_count); // Add sensor state to the byte array.
     bit_count -= 1;
     }
   }
 
   resultBits = sliderBits ^ 0x80808080;
 
-  // GAMEPLAY
-  // SENDING TO CONTROLLER THE RESULTED VALUES
-  if(sliderMode == GAMEPLAY){
+  if(sliderMode == GAMEPLAY){ // Slider in GAMEPLAY move (Future Tone/ Mega Mix mode)
+    
+    // SENDING TO CONTROLLER THE RESULTED VALUES
     ReportData.RY = (resultBits >> 24) & 0xFF;
     ReportData.RX = (resultBits >> 16) & 0xFF;
     ReportData.LY = (resultBits >> 8) & 0xFF;
     ReportData.LX = (resultBits) & 0xFF;
 
     // LEDS
-    
-  //if(!sensorTouched)
   if(!calibrated){
     bool lightUp = true;
       for (CRGB &led : leds){
@@ -581,8 +605,8 @@ void sliderGameplay(){
             led = CRGB::Black;
             lightUp = true;
             }
-            //led = CRGB::White;
         }
+  // White pannel when not touching like real Arcade slider (disabled for now)
   /*}else if(resultBits == noTouchBits){
     bool lightUp = true;
       for (CRGB &led : leds){
@@ -605,9 +629,9 @@ void sliderGameplay(){
       }
     }
   }
-  else if(sliderMode == CHUNITHM){
-
-    // KEYS
+  else if(sliderMode == CHUNITHM){ // Slider in Chunithm Mode
+    // GAMEPLAY
+    // KEYS CHUNITHM (Need tool to convert it to Keyboard or whatever... Made for 8 Keys inputs.)
     if(sensors[0] || sensors[1] || sensors[2] || sensors[3]) buttonStatus[BUTTONA] = true; else buttonStatus[BUTTONA] = false;
     if(sensors[4] || sensors[5] || sensors[6] || sensors[7]) buttonStatus[BUTTONB] = true; else buttonStatus[BUTTONB] = false;
     if(sensors[8] || sensors[9] || sensors[10] || sensors[11]) buttonStatus[BUTTONX] = true; else buttonStatus[BUTTONX] = false;
@@ -617,7 +641,7 @@ void sliderGameplay(){
     if(sensors[24] || sensors[25] || sensors[26] || sensors[27]) buttonStatus[BUTTONRT] = true; else buttonStatus[BUTTONRT] = false;
     if(sensors[28] || sensors[29] || sensors[30] || sensors[31]) buttonStatus[BUTTONLT] = true; else buttonStatus[BUTTONLT] = false;
     
-    // LEDS
+    // LEDS CHUNITHM (Yellow lighted up, Purple on 3 LEDs near touching)
   if(!calibrated){
     bool lightUp = true;
       for (CRGB &led : leds){
@@ -631,17 +655,6 @@ void sliderGameplay(){
             }
             //led = CRGB::White;
         }
-  /*}else if(resultBits == noTouchBits){
-    bool lightUp = true;
-      for (CRGB &led : leds){
-        if(lightUp){
-          led = CRGB::White;
-          lightUp = false;
-          }
-          else{
-            lightUp = true;
-            }
-        }*/
     }else{
     for (CRGB &led : leds){
         led = CRGB::Yellow;
@@ -660,9 +673,10 @@ void sliderGameplay(){
   
   }
 
+// Act as controllers buttons using virtual buttons on the Slider.
 void sliderNavigation(int page){
 
-  // Default Stick
+  // output Default Stick values to not trigger false positive in game
   long resultBits;
   int32_t sliderBits = 0;
   resultBits = sliderBits ^ 0x80808080;
@@ -672,10 +686,10 @@ void sliderNavigation(int page){
   ReportData.LY = (resultBits >> 8) & 0xFF;
   ReportData.LX = (resultBits) & 0xFF;
 
-
+  // Define LED colors...
   CRGB colorPushed = CRGB::White;
-  CRGB colorL1Btn = CRGB::LightBlue;
-  CRGB colorR1Btn = CRGB::LightBlue;
+  CRGB colorL1Btn = CRGB::DodgerBlue;
+  CRGB colorR1Btn = CRGB::DodgerBlue;
   CRGB colorL2Btn = CRGB::DarkBlue;
   CRGB colorR2Btn = CRGB::DarkBlue;
   CRGB colorUpBtn = CRGB(0, 255, 153);
@@ -683,13 +697,16 @@ void sliderNavigation(int page){
   CRGB colorLeftBtn = CRGB(255, 0, 242);
   CRGB colorRightBtn = CRGB::Red;
   CRGB colorShareBtn = CRGB::Cyan;
-  // sensors 0-2 & 29-31 : L1 / R1 | Blue
-  // sensors 3-5 & 26-28 : L2 / R2 | Darker blue
-  // sensors 6 & 25 : L3 / R3 | darkest blue
-  // sensors 9-11 : Up | Green
-  // sensors 13-15 : Down | Blue
-  // sensors 17-19 : Left | Pink
-  // sensors 21-23 : Right | Red
+  /* 
+   * sensors 0-2 & 29-31 : L1 / R1 | Blue
+   * sensors 3-5 & 26-28 : L2 / R2 | Darker blue
+   * sensors 6 & 25 : L3 / R3 | darkest blue
+   * sensors 9-11 : Up | Green
+   * sensors 13-15 : Down | Blue
+   * sensors 17-19 : Left | Pink
+   * sensors 21-23 : Right | Red
+   */
+
 switch(page){
   case 0:
     // Bumpers/Triggers
@@ -714,7 +731,7 @@ switch(page){
     if (sensors[21] || sensors[22] || sensors[23]) {buttonStatus[BUTTONRIGHT] = true;}
     else {buttonStatus[BUTTONRIGHT] = false;}
   
-    // LEDS
+    // Apply LEDS colors...
     if(buttonStatus[BUTTONLB]) colorL1Btn = colorPushed;
     if(buttonStatus[BUTTONRB]) colorR1Btn = colorPushed;
     if(buttonStatus[BUTTONLT]) colorL2Btn = colorPushed;
@@ -736,7 +753,8 @@ switch(page){
     leds[17] = leds[18] = leds[19] = colorLeftBtn;
     leds[21] = leds[22] = leds[23] = colorRightBtn;
   break;
-  case 1:
+  
+  case 1: // Page 2 not implemented
   
     // DPAD
     if (sensors[9] || sensors[10] || sensors[11]) {buttonStatus[BUTTONSELECT] = true;}
@@ -756,9 +774,11 @@ switch(page){
   }
 }
 
+
+// Edit and save settings for the Slider behaviour, using virtual buttons.
 void sliderSettings(){
 
-  // Default Stick
+  // output Default Stick values to not trigger false positive in game
   long resultBits;
   int32_t sliderBits = 0;
   resultBits = sliderBits ^ 0x80808080;
@@ -768,7 +788,7 @@ void sliderSettings(){
   ReportData.LY = (resultBits >> 8) & 0xFF;
   ReportData.LX = (resultBits) & 0xFF;
   
-  
+  // Virtual Buttons :
   // LED's Brightness
   if(sensors[0] || sensors[1] || sensors[2]) { 
     if(!pushedSettings1)
@@ -780,17 +800,26 @@ void sliderSettings(){
     pushedSettings1 = false;
     } 
   
-  // Sensitivity of Slider
+  // MPR121's sensitivity (How sensitive to touch it is ?)
   if(sensors[4] || sensors[5] || sensors[6]) { 
     if(!pushedSettings2)
       pushedSettings2 = true;
     }
   else if(pushedSettings2){
-    updateSettings(1, 0x04);
+    updateSettings(1, 0x06);
     pushedSettings2 = false;
-    } 
+    }
+  // Offset Release (How sensitive to release it is compared to touch sensitive ?)
+  if(sensors[7] || sensors[8]) {
+  if(!pushedSettings5)
+    pushedSettings5 = true;
+  }
+else if(pushedSettings5){
+  updateSettings(4, 0x04);
+  pushedSettings5 = false;
+  } 
 
-    // Slider Filter 1
+    // Slider Filter 1 (How much data needed to confirm the touch through MPR121s filter.)
   if(sensors[13] || sensors[14] || sensors[15]) { 
     if(!pushedSettings3)
       pushedSettings3 = true;
@@ -801,7 +830,7 @@ void sliderSettings(){
     pushedSettings3 = false;
     } 
 
-    // Slider Filter 2 (custom filter)
+    // Slider Filter 2 (How much cycles sensors mut be touched to confirm the touch through Custom Filter.)
   if(sensors[16] || sensors[17] || sensors[18]) { 
     if(!pushedSettings4)
       pushedSettings4 = true;
@@ -813,32 +842,55 @@ void sliderSettings(){
     } 
 
 
-
-  // LEDS
+  
+  // LEDS output
   for (CRGB &led : leds){
         led = CRGB::Black;
         }
   leds[0] = leds[1] = leds[2] = CRGB::Red;
-  leds[4] = leds[5] = leds[6] = CRGB::Blue;
-  switch(EEPROM.read(1)){
+  switch(EEPROM.read(1)){ // MPR121's sensitivity
     case 0x00:
-    leds[7] = CRGB::Orange;
+    leds[4] = leds[5] = leds[6] = CRGB::Orange;
     break;
     case 0x01:
-    leds[7] = CRGB::Yellow;
+    leds[4] = leds[5] = leds[6] = CRGB::Yellow;
     break;
     case 0x02:
-    leds[7] = CRGB::Green;
+    leds[4] = leds[5] = leds[6] = CRGB::Green;
     break;
     case 0x03:
-    leds[7] = CRGB::White;
+    leds[4] = leds[5] = leds[6] = CRGB::Cyan;
     break;
     case 0x04:
-    leds[7] = CRGB::Red;
+    leds[4] = leds[5] = leds[6] = CRGB::Blue;
     break;
-    default: leds[7] = CRGB::Orange;
+    case 0x05:
+    leds[4] = leds[5] = leds[6] = CRGB::Purple;
+    break;
+    case 0x06:
+    leds[4] = leds[5] = leds[6] = CRGB::Red;
+    break;
+    default: leds[4] = leds[5] = leds[6] = CRGB::Orange;
   }
-  switch(EEPROM.read(2)){
+  switch(EEPROM.read(4)){ // Offset Release
+    case 0x00:
+    leds[7] = leds[8] = CRGB::Green;
+    break;
+    case 0x01:
+    leds[7] = leds[8] = CRGB::Blue;
+    break;
+    case 0x02:
+    leds[7] = leds[8] = CRGB::Cyan;
+    break;
+    case 0x03:
+    leds[7] = leds[8] = CRGB::Yellow;
+    break;
+    case 0x04:
+    leds[7] = leds[8] = CRGB::Red;
+    break;
+    default: leds[4] = leds[5] = leds[6] = CRGB::White;
+  }
+  switch(EEPROM.read(2)){ // MPR121's Filter
     case 0x00:
     leds[13] = leds[14] = leds[15] = CRGB::Yellow;
     break;
@@ -850,7 +902,7 @@ void sliderSettings(){
     break;
     default: leds[13] = leds[14] = leds[15] = CRGB::Yellow;
   }
-  switch(EEPROM.read(3)){
+  switch(EEPROM.read(3)){ // Custom Filter
     case 0x00:
     leds[16] = leds[17] = leds[18] = CRGB::Red;
     break;
@@ -865,44 +917,50 @@ void sliderSettings(){
   
 }
 
-void updateSettings(int index, byte quantity){
+// Saving Settings in EEPROM
+void updateSettings(int index, byte _size){
   byte temp = EEPROM.read(index);
-    if(temp < quantity)
+    if(temp < _size)
       temp++;
     else
       temp = 0x00;
     EEPROM.write(index, temp);
   }
 
-void buttonRead()
-{
-  if (joystickUP.update()) {buttonStatus[BUTTONUP] = joystickUP.fell();}
-  if (joystickDOWN.update()) {buttonStatus[BUTTONDOWN] = joystickDOWN.fell();}
-  if (joystickLEFT.update()) {buttonStatus[BUTTONLEFT] = joystickLEFT.fell();}
-  if (joystickRIGHT.update()) {buttonStatus[BUTTONRIGHT] = joystickRIGHT.fell();}
-  if (buttonA.update()) {buttonStatus[BUTTONA] = buttonA.fell();}
-  if (buttonB.update()) {buttonStatus[BUTTONB] = buttonB.fell();}
-  if (buttonX.update()) {buttonStatus[BUTTONX] = buttonX.fell();}
-  if (buttonY.update()) {buttonStatus[BUTTONY] = buttonY.fell();}
-  if (buttonLB.update()) {buttonStatus[BUTTONLB] = buttonLB.fell();}
-  if (buttonRB.update()) {buttonStatus[BUTTONRB] = buttonRB.fell();}
-  if (buttonLT.update()) {buttonStatus[BUTTONLT] = buttonLT.fell();}
-  if (buttonRT.update()) {buttonStatus[BUTTONRT] = buttonRT.fell();}
-  if (buttonSTART.update()) {buttonStatus[BUTTONSTART] = buttonSTART.fell();}
-  if (buttonSELECT.update()) {buttonStatus[BUTTONSELECT] = buttonSELECT.fell();}
-  if (buttonHOME.update()) {buttonStatus[BUTTONHOME] = buttonHOME.fell();}
-  if (switchModePin.update()) {buttonStatus[SWITCHMODEPIN] = switchModePin.fell();}
-  
-  //if (buttonSwitchMenu.update()) {buttonStatus[BUTTONSWITCHMENU] = buttonSwitchMenu.fell();}
+void buttonRead(){
+    if (joystickUP.update()) {buttonStatus[BUTTONUP] = joystickUP.fell();}
+    if (joystickDOWN.update()) {buttonStatus[BUTTONDOWN] = joystickDOWN.fell();}
+    if (joystickLEFT.update()) {buttonStatus[BUTTONLEFT] = joystickLEFT.fell();}
+    if (joystickRIGHT.update()) {buttonStatus[BUTTONRIGHT] = joystickRIGHT.fell();}
+    if (buttonA.update()) {buttonStatus[BUTTONA] = buttonA.fell();}
+    if (buttonB.update()) {buttonStatus[BUTTONB] = buttonB.fell();}
+    if (buttonX.update()) {buttonStatus[BUTTONX] = buttonX.fell();}
+    if (buttonY.update()) {buttonStatus[BUTTONY] = buttonY.fell();}
+    if (buttonLB.update()) {buttonStatus[BUTTONLB] = buttonLB.fell();}
+    if (buttonRB.update()) {buttonStatus[BUTTONRB] = buttonRB.fell();}
+    if (buttonLT.update()) {buttonStatus[BUTTONLT] = buttonLT.fell();}
+    if (buttonRT.update()) {buttonStatus[BUTTONRT] = buttonRT.fell();}
+    if (buttonSTART.update()) {buttonStatus[BUTTONSTART] = buttonSTART.fell();}
+    if (buttonSELECT.update()) {buttonStatus[BUTTONSELECT] = buttonSELECT.fell();}
+    if (buttonHOME.update()) {buttonStatus[BUTTONHOME] = buttonHOME.fell();}
+    if (switchModePin.update()) {buttonStatus[SWITCHMODEPIN] = switchModePin.fell();}
 }
 
 
+/*
+ * Processing Buttons & Dpad
+ */
+void processButtons(){
+  switch (state) // Can create other states to act differently...
+  {
+    case DIGITAL:
+        processDPAD();
+        buttonProcessing();
+    break;
+  }
+}
+
 void processDPAD(){
-    /*ReportData.LX = 128;
-    ReportData.LY = 128;
-    ReportData.RX = 128;
-    ReportData.RY = 128;*/
- 
     if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONRIGHT])){ReportData.HAT = DPAD_UPRIGHT_MASK_ON;}
     else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONRIGHT])) {ReportData.HAT = DPAD_DOWNRIGHT_MASK_ON;} 
     else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONLEFT])) {ReportData.HAT = DPAD_DOWNLEFT_MASK_ON;}
@@ -914,74 +972,7 @@ void processDPAD(){
     else{ReportData.HAT = DPAD_NOTHING_MASK_ON;}
 }
 
-void processLANALOG(){
-    ReportData.HAT = DPAD_NOTHING_MASK_ON;
-    ReportData.RX = 128;
-    ReportData.RY = 128;
 
-    if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONRIGHT])){ReportData.LY = 0;ReportData.LX = 255;}
-    else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONRIGHT])) {ReportData.LY = 255;ReportData.LX = 255;}
-    else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONLEFT])) {ReportData.LY = 255;ReportData.LX = 0;}
-    else if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONLEFT])){ReportData.LY = 0;ReportData.LX = 0;}
-    else if (buttonStatus[BUTTONUP]) {ReportData.LY = 0;ReportData.LX = 128;}
-    else if (buttonStatus[BUTTONDOWN]) {ReportData.LY = 255;ReportData.LX = 128;}
-    else if (buttonStatus[BUTTONLEFT]) {ReportData.LX = 0;ReportData.LY = 128;}
-    else if (buttonStatus[BUTTONRIGHT]) {ReportData.LX = 255;ReportData.LY = 128;}
-    else {ReportData.LX = 128;ReportData.LY = 128;}
-}
-void processLANALOGSmash(){
-    ReportData.HAT = DPAD_NOTHING_MASK_ON;
-    ReportData.RX = 128;
-    ReportData.RY = 128;
-    
-    if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONRIGHT])){ReportData.LY = 64;ReportData.LX = 192;}
-    else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONRIGHT])) {ReportData.LY = 192;ReportData.LX = 192;}
-    else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONLEFT])) {ReportData.LY = 192;ReportData.LX = 64;}  
-    else if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONLEFT])){ReportData.LY = 64;ReportData.LX = 64;}
-    else if (buttonStatus[BUTTONUP]) {ReportData.LY = 64;ReportData.LX = 128;}
-    else if (buttonStatus[BUTTONDOWN]) {ReportData.LY = 192;ReportData.LX = 128;}
-    else if (buttonStatus[BUTTONLEFT]) {ReportData.LX = 64;ReportData.LY = 128;}
-    else if (buttonStatus[BUTTONRIGHT]) {ReportData.LX = 192;ReportData.LY = 128;}
-    else{ReportData.LX = 128;ReportData.LY = 128;}
-}
-void processRANALOG(){
-    ReportData.HAT = 0x08;
-    ReportData.LX = 128;
-    ReportData.LY = 128;
-    
-    if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONRIGHT])){ReportData.RY = 0;ReportData.RX = 255;}
-    else if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONLEFT])){ReportData.RY = 0;ReportData.RX = 0;}
-    else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONRIGHT])) {ReportData.RY = 255;ReportData.RX = 255;}
-    else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONLEFT])) {ReportData.RY = 255;ReportData.RX = 0;}
-    else if (buttonStatus[BUTTONUP]) {ReportData.RY = 0;ReportData.RX = 128;}
-    else if (buttonStatus[BUTTONDOWN]) {ReportData.RY = 255;ReportData.RX = 128;}
-    else if (buttonStatus[BUTTONLEFT]) {ReportData.RX = 0;ReportData.RY = 128;}
-    else if (buttonStatus[BUTTONRIGHT]) {ReportData.RX = 255;ReportData.RY = 128;}
-    else {ReportData.RX = 128;ReportData.RY = 128;}
-    
-}
-void processButtons(){
-  //state gets set with checkModeChange
-  switch (state)
-  {
-    case DIGITAL:
-        processDPAD();
-        buttonProcessing();
-    break;
-
-    case ANALOG_MODE:   
-       if(buttonStatus[BUTTONLT]){processRANALOG();}
-       else{processLANALOG();}
-       buttonProcessing();
-    break;
-
-    case SMASH:
-       if(buttonStatus[BUTTONB]){processLANALOGSmash();}
-       else{processLANALOG();}
-       buttonProcessingSmash();
-    break;
-  }
-}
 void buttonProcessing(){
   if (buttonStatus[BUTTONA]) {ReportData.Button |= A_MASK_ON;}
   if (buttonStatus[BUTTONB]) {ReportData.Button |= B_MASK_ON;}
@@ -994,17 +985,5 @@ void buttonProcessing(){
   if (buttonStatus[BUTTONSTART]){ReportData.Button |= START_MASK_ON;}
   if (buttonStatus[BUTTONSELECT]){ReportData.Button |= SELECT_MASK_ON;}
   if (buttonStatus[BUTTONHOME]){ReportData.Button |= HOME_MASK_ON;}
-}
-void buttonProcessingSmash(){
-  if (buttonStatus[BUTTONA]) {ReportData.Button |= X_MASK_ON;}
-  if (buttonStatus[BUTTONB]) {}
-  if (buttonStatus[BUTTONX]) {ReportData.Button |= A_MASK_ON;}
-  if (buttonStatus[BUTTONY]) {ReportData.Button |= B_MASK_ON;}
-  if (buttonStatus[BUTTONLB]) {ReportData.Button |= LB_MASK_ON;}
-  if (buttonStatus[BUTTONRB]) {ReportData.Button |= ZR_MASK_ON;}
-  if (buttonStatus[BUTTONLT]) {ReportData.Button |= ZL_MASK_ON;}
-  if (buttonStatus[BUTTONRT]) {ReportData.Button |= RB_MASK_ON;}
-  if (buttonStatus[BUTTONSTART]){ReportData.Button |= START_MASK_ON;}
-  if (buttonStatus[BUTTONSELECT]){ReportData.Button |= SELECT_MASK_ON;}
-  if (buttonStatus[BUTTONHOME]){ReportData.Button |= HOME_MASK_ON;}
+  // Need more buttons...
 }
