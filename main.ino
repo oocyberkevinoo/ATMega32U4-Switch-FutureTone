@@ -111,9 +111,16 @@ bool pushedSettings2 = false;
 bool pushedSettings3 = false;
 bool pushedSettings4 = false;
 bool pushedSettings5 = false;
+bool pushedSettings6 = false;
 byte sliderFilter1 = 0x00;
 byte sliderFilter2 = 0x00;
 byte sliderOffsetRelease = 0x00;
+byte gameplayLightUp = 0x00;
+
+// Slider LightUp Effect
+int lightUpTimer = 0;
+int lightUpMax = 25*5;
+int lightUpCurrent = 0;
 
 
 // LEDs
@@ -211,7 +218,7 @@ void sensorsInitialization(){
       mpr.proxEnable = MPR_ELEPROX_DISABLED;
   
     
-    // Setting up the MPR121's filters...
+    // Setting up the MPR121's filters depending on EEPROM stored values...
     switch(sliderFilter1){
       default:
       mpr.FFI = MPR_FFI_10;
@@ -246,6 +253,7 @@ void ledsInitialization(){
 void settingsLoader(){ // Load settings from EEPROM that need fast load
   sliderFilter1 = EEPROM.read(2);
   sliderFilter2 = EEPROM.read(3);
+  gameplayLightUp = EEPROM.read(5);
   }
   
 
@@ -606,18 +614,23 @@ void sliderGameplay(){
             lightUp = true;
             }
         }
-  // White pannel when not touching like real Arcade slider (disabled for now)
-  /*}else if(resultBits == noTouchBits){
-    bool lightUp = true;
-      for (CRGB &led : leds){
-        if(lightUp){
-          led = CRGB::White;
-          lightUp = false;
-          }
+  // White pannel when not touching
+  }else if(resultBits == noTouchBits && gameplayLightUp == 0x01){
+    // Adjust timer and RGB values for LEDs
+    if(lightUpTimer > 0) lightUpTimer--;
+    if(lightUpCurrent < lightUpMax) lightUpCurrent++;
+       bool lightUp = true;
+        for (CRGB &led : leds){
+          if(lightUp && lightUpTimer <= 0){
+            led = CRGB(lightUpCurrent/5, lightUpCurrent/5, lightUpCurrent/5);
+            lightUp = false;
+            }
           else{
+            led = CRGB::Black;
             lightUp = true;
             }
-        }*/
+        }
+   
     }else{
     for (CRGB &led : leds){
         led = CRGB::Black;
@@ -625,6 +638,8 @@ void sliderGameplay(){
     for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
       if(sensors[i]){
         leds[i] = CRGB::White;
+        if(lightUpCurrent != 0) lightUpCurrent = 0;
+        if(lightUpTimer != 25) lightUpTimer = 25;
         }
       }
     }
@@ -841,6 +856,17 @@ else if(pushedSettings5){
     pushedSettings4 = false;
     } 
 
+    // Lighten Up when not touching on GAMEPLAY ?
+  if(sensors[22] || sensors[23]) { 
+    if(!pushedSettings6)
+      pushedSettings6 = true;
+    }
+  else if(pushedSettings6){
+    updateSettings(5, 0x01);
+    settingsLoader();
+    pushedSettings6 = false;
+    } 
+
 
   
   // LEDS output
@@ -913,6 +939,15 @@ else if(pushedSettings5){
     leds[16] = leds[17] = leds[18] = CRGB::Green;
     break;
     default: leds[16] = leds[17] = leds[18] = CRGB::Red;
+  }
+  switch(EEPROM.read(5)){ // GAMEPLAY light mode
+    case 0x00:
+    leds[22] = leds[23] = CRGB::Red;
+    break;
+    case 0x01:
+    leds[22] = leds[23] = CRGB::Green;
+    break;
+    default: leds[22] = leds[23] = CRGB::Red;
   }
   
 }
