@@ -602,8 +602,10 @@ void sliderGameplay(){
     ReportData.LX = (resultBits) & 0xFF;
 
     // LEDS
-  if(!calibrated){
+  if(!calibrated){ // When calibrating...
+    
     bool lightUp = true;
+    /*  Previously was just white while calibrating.
       for (CRGB &led : leds){
         if(lightUp){
           led = CRGB::White;
@@ -613,9 +615,13 @@ void sliderGameplay(){
             led = CRGB::Black;
             lightUp = true;
             }
-        }
-  // White pannel when not touching
-  }else if(resultBits == noTouchBits && gameplayLightUp == 0x01){
+        }*/
+        // Rainbow effect
+      uint8_t thisHue = beat8(15,255); 
+      fill_rainbow(leds, NUM_LEDS_PER_STRIP, thisHue, -15); 
+      
+
+  }else if(resultBits == noTouchBits && gameplayLightUp == 0x01){   // White pannel when not touching, with transition and buffer to make it smooth
     // Adjust timer and RGB values for LEDs
     if(lightUpTimer > 0) lightUpTimer--;
     if(lightUpCurrent < lightUpMax) lightUpCurrent++;
@@ -635,7 +641,7 @@ void sliderGameplay(){
     for (CRGB &led : leds){
         led = CRGB::Black;
         }
-    for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
+    for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){  // Lightup the touched sensor
       if(sensors[i]){
         leds[i] = CRGB::White;
         if(lightUpCurrent != 0) lightUpCurrent = 0;
