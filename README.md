@@ -1,4 +1,4 @@
-## BETA PHASE
+# BETA PHASE
 The Slider have been tested now and is working, but need adjustement.
 Use now at your own risk.
 
@@ -17,12 +17,22 @@ You'll need the exact same hardware and libraries as the original repo (+ The [Q
 
 Thanks to [Somewhatlurker](https://github.com/somewhatlurker), [Dogtopus](https://github.com/dogtopus/), [TheCorrellRoyHD](https://twitter.com/correllroy), [Zedamex](https://www.youtube.com/channel/UCZ-jUHyriPCuebtpx48MPdQ) for all the needed datas, informations, and help on developping this project.
 
+
+## LUFA & QuickMPR121 use
+### LUFA
+Please remember that LUFA change the way Arduino's USB is working.
+To flash code on a Arduino that is running LUFA code, you need to double press "Reset" on your Arduino. (if it don't have button Reset, you have to create your own button, connection RST to GND)
+
+### QuickMPR121
+To use multiple MPR121s, here's this [layout](https://user-images.githubusercontent.com/22883203/132257503-b0a68036-46a7-43d3-a15f-b2952b6a3bcc.png)
+
+
 ## TO DO
 - PS4 Support
 - Adjusting sensitivity
 - More buttons in Navigation Mode (L3 & R3)
 
-(Below is the original ReadMe)
+# (Below is the original ReadMe)
 
 ## Switch Fightstick Code (Atmega32U4)
 
