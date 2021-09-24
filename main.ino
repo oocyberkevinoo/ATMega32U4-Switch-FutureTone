@@ -66,15 +66,14 @@ bool PS4 = false;
 // DEFINE Slider
 #define NUM_MPRS 3                // Number of MPRs
 #define PROXIMITY_ENABLE false    // Proximity check (not needed)
-#define NUM_SENSORS 36            // Number of TOTAL sensors
 #define MPR_THRESHOLD_TOUCH 12    // Default Touch Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
 #define MPR_THRESHOLD_RELEASE 10  // Default Release Sensitivity (2~4 behind the touch one)
 
 // Initialise arrays for sensors...
-short sensors[NUM_SENSORS];             
-short sensorsConfirmed[NUM_SENSORS];
-short sensorsConfirmed2[NUM_SENSORS];
-bool sensorsTouched[NUM_SENSORS];
+short sensors[NUM_MPRS*12];             
+short sensorsConfirmed[NUM_MPRS*12];
+short sensorsConfirmed2[NUM_MPRS*12];
+bool sensorsTouched[NUM_MPRS*12];
 bool sensorTouched;
 
 // create the mpr121 instances
@@ -474,21 +473,6 @@ void checkSensors(){
           sensors[sensorCount] = touching;
         break;
           
-        }
-
-        // So, sensor is touched...?
-      if(touching){
-        if(sensorsConfirmed[sensorCount] && sensorsConfirmed2[sensorCount])
-          sensors[sensorCount] = touching;
-        else if(sensorsConfirmed[sensorCount])
-          sensorsConfirmed2[sensorCount] = touching;
-        else
-          sensorsConfirmed[sensorCount] = touching;
-      }
-      else{ // if not, all custom filters memory are reset...
-        sensors[sensorCount] = touching;
-        sensorsConfirmed[sensorCount] = touching;
-        sensorsConfirmed2[sensorCount] = touching;
         }
 
         // How many sensors touched ? (not used)
