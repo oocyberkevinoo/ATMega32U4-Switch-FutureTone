@@ -75,6 +75,7 @@ short sensorsConfirmed[NUM_MPRS*12];
 short sensorsConfirmed2[NUM_MPRS*12];
 bool sensorsTouched[NUM_MPRS*12];
 bool sensorTouched;
+bool sensorsDisabled[NUM_MPRS*12];
 
 // create the mpr121 instances
 // these will have addresses set automatically
@@ -92,6 +93,7 @@ typedef enum {
   ARCADE,
   MENU,
   SETTINGS,
+  TRIGGER,
   CALIBRATE
 } SliderMode;
 SliderMode sliderMode = GAMEPLAY;       // Default mode is GAMEPLAY
@@ -293,15 +295,19 @@ void loop() {
     {
       case GAMEPLAY: // Slider act like the HORI controller's Slider with Dedicated Controller Mode (For Mega39's / MegaMix / Future Tone (International version not compatible)
       sliderGameplay();
+      processButtons(); // Processing controller state...
       break;
       case NAVIGATION: // Slider act like a controller with navigations buttons if you lack of buttons on your controller (customize the code below)
       sliderNavigation(0);
+      processButtons();
       break;
       case NAVIGATION2: // Page 2, unused.
       sliderNavigation(1);
+      processButtons();
       break;
       case CHUNITHM: // Slider CHUNITHM 8 KEYS
       sliderGameplay();
+      processButtons();
       break;
       case ARCADE: // Slider act like a Keyboard that you can hook up to Project Diva Arcade Future Tone (TO DO)
       sliderMenu();
@@ -312,13 +318,16 @@ void loop() {
       case SETTINGS: // Slider settings
       sliderSettings();
       break;
+      case TRIGGER: // Disable faulty sensor
+      sliderTriggerMode();
+      break;
       case CALIBRATE: // Calibrate slider
       calibrateSensors();
       break;
     }
 
-    // Processing controller state...
-    processButtons();
+    
+    
     HID_Task();
     // We also need to run the main USB management task.
     USB_USBTask();
@@ -440,6 +449,12 @@ void checkSensors(){
     mpr121 &mpr = mprs[i];
     for (int j = 0; j < numElectrodes; j++) { // Checking each sensor...
       short touching = mpr.readTouchState(j); // Is it touched ?...
+      if(sensorsDisabled[sensorCount]){ // Is it disabled ?
+        if(sensors[sensorCount-1] || sensors[sensorCount+1]) // Is near sensors is touched ?
+          touching = 0x01;
+        else
+          touching = 0x00;
+        }
       // CUSTOM FILTER...
       switch(sliderFilter2){  
         default:      // Filter Level 2: Double check... (Bigest latency, best stability...)
@@ -498,7 +513,6 @@ void checkSensors(){
   if(touchedSensors > 0){
     sensorTouched = true;
     }
-    
 }
 
 // Is a sensor has been just touched ? (Unused)
@@ -531,14 +545,14 @@ void sliderMenu(){
   {    
     if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]] || sensors[sensorsArcade[4]])
       sliderModeChange = SETTINGS;
-      else if(sensors[sensorsNav[0]] || sensors[sensorsNav[1]] || sensors[sensorsNav[2]] || sensors[sensorsNav[3]] || sensors[sensorsNav[4]])
+    else if(sensors[sensorsNav[0]] || sensors[sensorsNav[1]] || sensors[sensorsNav[2]] || sensors[sensorsNav[3]] || sensors[sensorsNav[4]])
       sliderModeChange = NAVIGATION;
-      else if(sensors[sensorsChunithm[0]] || sensors[sensorsChunithm[1]] || sensors[sensorsChunithm[2]] || sensors[sensorsChunithm[3]] || sensors[sensorsChunithm[4]])
+    else if(sensors[sensorsChunithm[0]] || sensors[sensorsChunithm[1]] || sensors[sensorsChunithm[2]] || sensors[sensorsChunithm[3]] || sensors[sensorsChunithm[4]])
       sliderModeChange = CHUNITHM;
-      else if(sensors[sensorsGame[0]] || sensors[sensorsGame[1]] || sensors[sensorsGame[2]] || sensors[sensorsGame[3]] || sensors[sensorsGame[4]])
+    else if(sensors[sensorsGame[0]] || sensors[sensorsGame[1]] || sensors[sensorsGame[2]] || sensors[sensorsGame[3]] || sensors[sensorsGame[4]])
       sliderModeChange = GAMEPLAY;
-      //else if(sensors[sensorsSwapPS4[0]] || sensors[sensorsSwapPS4[1]] || sensors[sensorsSwapPS4[2]])
-      //sliderModeChange = MENU;
+    else if(buttonStatus[BUTTONX])
+      sliderModeChange = TRIGGER;
     
   }
    //LEDS
@@ -610,9 +624,15 @@ void sliderGameplay(){
     if(lightUpTimer > 0) lightUpTimer--;
     if(lightUpCurrent < lightUpMax) lightUpCurrent++;
        bool lightUp = true;
+       bool first = true;
         for (CRGB &led : leds){
           if(lightUp && lightUpTimer <= 0){
-            led = CRGB(lightUpCurrent/5, lightUpCurrent/5, lightUpCurrent/5);
+            if(!first)
+              led = CRGB(lightUpCurrent/5, lightUpCurrent/5, lightUpCurrent/5);
+            else
+              led = CRGB::Black; // Except for the first one
+
+            if(first) first = false;
             lightUp = false;
             }
           else{
@@ -675,6 +695,30 @@ void sliderGameplay(){
   }
   
   
+  
+  }
+
+// Disable specific sensors, and enable the one around them to trigger it. Use if faulty sensors.
+void sliderTriggerMode(){
+
+  
+  for (CRGB &led : leds){
+          led = CRGB::Green;
+          }
+  for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
+    if(sensors[i]){
+      sensorsDisabled[i] = true;
+      }
+    if(sensorsDisabled[i]){
+      leds[i] = CRGB::Red;
+      }
+    }
+
+    if(buttonStatus[BUTTONB]){
+      for (bool &sensorDisabled : sensorsDisabled){
+        sensorDisabled = false;
+        }
+      }
   
   }
 
