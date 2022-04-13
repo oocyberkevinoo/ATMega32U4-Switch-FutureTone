@@ -63,6 +63,9 @@ int buttonSwitchModeTimer = 1000;
 // Is it in PS4 mode (Not available for now, should use a converter for PS4 for now, that ensure correct analog datas... See my git ReadMe for more informations)
 bool PS4 = false;
 
+// Slider gameplay enabled ?
+bool sliderGameplayEnabled = true;
+
 // DEFINE Slider
 #define NUM_MPRS 3                // Number of MPRs
 #define PROXIMITY_ENABLE false    // Proximity check (not needed)
@@ -248,7 +251,7 @@ void sensorsInitialization(){
 void ledsInitialization(){
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS_PER_STRIP);
   FastLED.setBrightness(LEDBrightnessLoad());
-  FastLED.setMaxPowerInVoltsAndMilliamps(5, 400);
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, 230);
   }
 
 void settingsLoader(){ // Load settings from EEPROM that need fast load
@@ -449,8 +452,8 @@ void checkSensors(){
     mpr121 &mpr = mprs[i];
     for (int j = 0; j < numElectrodes; j++) { // Checking each sensor...
       short touching = mpr.readTouchState(j); // Is it touched ?...
-      if(sensorsDisabled[sensorCount]){ // Is it disabled ?
-        if(sensors[sensorCount-1] || sensors[sensorCount+1]) // Is near sensors is touched ?
+      if(sensorsDisabled[sensorCount] || (!sliderGameplayEnabled && sliderMode == GAMEPLAY)){ // Is it disabled ?
+        if(sliderGameplayEnabled && (sensors[sensorCount-1] || sensors[sensorCount+1])) // Is near sensors is touched ?
           touching = 0x01;
         else
           touching = 0x00;
@@ -538,6 +541,7 @@ void sliderMenu(){
   ReportData.LY = (resultBits >> 8) & 0xFF;
   ReportData.LX = (resultBits) & 0xFF;
 
+  resetButtons();
   
    
     //Virtual Buttons of menu
@@ -553,16 +557,20 @@ void sliderMenu(){
       sliderModeChange = GAMEPLAY;
     else if(buttonStatus[BUTTONX])
       sliderModeChange = TRIGGER;
+    else if(buttonStatus[BUTTONHOME]){
+      if(sliderGameplayEnabled)
+        sliderGameplayEnabled = false;
+      else
+        sliderGameplayEnabled = true;  
+      sliderModeChange = GAMEPLAY;
+      }
+      
     
   }
    //LEDS
 for (CRGB &led : leds){
         led = CRGB::Black;
         }
-    /*if(!PS4)
-      leds[0] = leds[1] = leds[2] = CRGB::DarkRed;
-    else
-      leds[0] = leds[1] = leds[2] = CRGB::Aqua;*/
       
     leds[sensorsArcade[0]] = leds[sensorsArcade[1]] = leds[sensorsArcade[2]] = leds[sensorsArcade[3]] = leds[sensorsArcade[4]] = CRGB(0, 255, 153);
     leds[sensorsChunithm[0]] = leds[sensorsChunithm[1]] = leds[sensorsChunithm[2]] = leds[sensorsChunithm[3]] = leds[sensorsChunithm[4]] = CRGB(255, 0, 242);
@@ -1055,4 +1063,23 @@ void buttonProcessing(){
   if (buttonStatus[BUTTONSELECT]){ReportData.Button |= SELECT_MASK_ON;}
   if (buttonStatus[BUTTONHOME]){ReportData.Button |= HOME_MASK_ON;}
   // Need more buttons...
+}
+
+void resetButtons(){
+  buttonStatus[BUTTONA] = false;
+  buttonStatus[BUTTONB] = false;
+  buttonStatus[BUTTONX] = false;
+  buttonStatus[BUTTONY] = false;
+  buttonStatus[BUTTONLB] = false;
+  buttonStatus[BUTTONRB] = false;
+  buttonStatus[BUTTONLT] = false;
+  buttonStatus[BUTTONRT] = false;
+  buttonStatus[BUTTONSTART] = false;
+  buttonStatus[BUTTONSELECT] = false;
+  buttonStatus[BUTTONHOME] = false;
+
+  buttonStatus[BUTTONUP] = false;
+  buttonStatus[BUTTONDOWN] = false;
+  buttonStatus[BUTTONLEFT] = false;
+  buttonStatus[BUTTONRIGHT] = false;
 }
