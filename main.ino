@@ -393,31 +393,31 @@ int LEDBrightnessLoad(){  // LEDs brightness level
 int SensitivityLoad(){  // Sensitivity of sensors
   switch(EEPROM.read(1)){
     case 0x00:
-    return 14;
-    break;
-    case 0x01:
     return 13;
     break;
-    case 0x02:
-    return 12;
-    break;
-    case 0x03:
+    case 0x01:
     return 11;
     break;
-    case 0x04:
+    case 0x02:
     return 10;
     break;
-    case 0x05:
+    case 0x03:
     return 9;
     break;
-    case 0x06:
+    case 0x04:
     return 8;
     break;
-    case 0x07:
+    case 0x05:
     return 7;
     break;
-    case 0x08:
+    case 0x06:
     return 6;
+    break;
+    case 0x07:
+    return 5;
+    break;
+    case 0x08:
+    return 4;
     break;
     default:
     return 11;
@@ -934,6 +934,8 @@ void sliderSettings(){
   ReportData.RX = (resultBits >> 16) & 0xFF;
   ReportData.LY = (resultBits >> 8) & 0xFF;
   ReportData.LX = (resultBits) & 0xFF;
+
+  processButtons();
   
   // Virtual Buttons :
   // LED's Brightness
