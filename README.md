@@ -1,11 +1,3 @@
-# BETA PHASE
-The Slider have been tested now and is working, but need adjustement.
-Use now at your own risk.
-
-Actually I still have issue with my own Slider, but it's not due to code issue.
-You can see the issue here : 
-https://www.youtube.com/watch?v=96qyRrq-JJk
-
 ## Project Diva Controller (Switch)
 
 This repo is a fork from the [fluffymadness/ATMega32U4-Switch-Fightstick repo](https://github.com/fluffymadness/ATMega32U4-Switch-Fightstick)
@@ -29,8 +21,16 @@ To use multiple MPR121s, here's this [layout](https://user-images.githubusercont
 
 ## TO DO
 - PS4 Support
-- Adjusting sensitivity
-- More buttons in Navigation Mode (L3 & R3)
+
+## NEW NAVIGATION SHORTCUT MODE /!\
+### What it is ?
+It let you hold a button to change how the controller behave, it's useful if you don't have enough buttons on your controller.
+You can even map part of the slider to buttons.
+
+### Why there's a warning ?
+If you update your code from now, your button mapping changed for buttons like HOME button.
+Please check and adapt this new mode to your desire.
+(Check the ControllerNavShortcut.jpg to see where, and how it act by default.)
 
 # (Below is the original ReadMe)
 
@@ -56,20 +56,18 @@ You can switch seamlessly between the 3 modes by pressing START+SELECT.
 - Build and Flash for your ATMEGA32U4 Board
 - Have Fun
 
-## Pinmapping
+## Pinmapping (UPDATED FOR THIS FORK !)
 
 Here is the Pinnumbers to Button Mapping for Connecting the actual physical cables to a Pro Micro.
-	joystickUP.attach(0,INPUT_PULLUP);
+	
 
-	joystickDOWN.attach(1,INPUT_PULLUP);
+	joystickLEFT.attach(1,INPUT_PULLUP);
 
-	joystickLEFT.attach(2,INPUT_PULLUP);
+	joystickRIGHT.attach(0,INPUT_PULLUP);
 
-	joystickRIGHT.attach(3,INPUT_PULLUP);
+	buttonA.attach(4,INPUT_PULLUP);
 
-	buttonA.attach(5,INPUT_PULLUP);
-
-	buttonB.attach(4,INPUT_PULLUP);
+	buttonB.attach(5,INPUT_PULLUP);
 
 	buttonX.attach(7,INPUT_PULLUP);
 
@@ -79,15 +77,18 @@ Here is the Pinnumbers to Button Mapping for Connecting the actual physical cabl
 
 	buttonRB.attach(8,INPUT_PULLUP);
 
-	buttonLT.attach(14,INPUT_PULLUP);
+	buttonLT.attach(16,INPUT_PULLUP);
 
 	buttonRT.attach(10,INPUT_PULLUP);
 
 	buttonSTART.attach(15,INPUT_PULLUP);
 
-	buttonSELECT.attach(16,INPUT_PULLUP);
+	buttonSELECT.attach(14,INPUT_PULLUP);
 
-	buttonHOME.attach(18,INPUT_PULLUP);
+	//buttonHOME.attach(18,INPUT_PULLUP);
+	navModePin.attach(18,INPUT_PULLUP);
+	
+	switchModePin.attach(19,INPUT_PULLUP);
 
 ### Credits
 
