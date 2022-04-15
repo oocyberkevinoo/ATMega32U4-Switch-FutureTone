@@ -14,7 +14,7 @@ unsigned long previousMillis = 0;
 unsigned long interval = 30;
 
 // Buttons values
-byte buttonStatus[16] = {0};
+byte buttonStatus[17] = {0};
 int buttonSwitchModeTimer = 1000;
 
 // DEFINE buttons addresses
@@ -41,6 +41,7 @@ int buttonSwitchModeTimer = 1000;
 #define START_MASK_ON 0x200
 #define SELECT_MASK_ON 0x100
 #define HOME_MASK_ON 0x1000
+// #define PS4_TOUCHPAD_MASK_ON 0x???
 
 // DEFINE buttons index
 #define BUTTONUP 0
@@ -59,9 +60,13 @@ int buttonSwitchModeTimer = 1000;
 #define BUTTONSELECT 13
 #define BUTTONHOME 14
 #define SWITCHMODEPIN 15
+#define NAVMODEPIN 16
 
 // Is it in PS4 mode (Not available for now, should use a converter for PS4 for now, that ensure correct analog datas... See my git ReadMe for more informations)
 bool PS4 = false;
+
+// Is it in NAV shortcut mode ?
+bool NAV = false;
 
 // Slider gameplay enabled ?
 bool sliderGameplayEnabled = true;
@@ -127,6 +132,9 @@ int lightUpTimer = 0;
 int lightUpMax = 25*5;
 int lightUpCurrent = 0;
 
+// Navigation page
+int navigationPage = 1;
+
 short sensor32 = 0;
 
 
@@ -154,7 +162,9 @@ Bounce buttonRT = Bounce();
 Bounce buttonSTART = Bounce();
 Bounce buttonSELECT = Bounce();
 Bounce buttonHOME = Bounce();
+
 Bounce switchModePin = Bounce();
+Bounce navModePin = Bounce();
 
 typedef enum {
   DIGITAL,
@@ -179,8 +189,10 @@ void setupPins(){
     buttonRT.attach(10,INPUT_PULLUP);
     buttonSTART.attach(15,INPUT_PULLUP);
     buttonSELECT.attach(14,INPUT_PULLUP);
-    buttonHOME.attach(18,INPUT_PULLUP);
+    //buttonHOME.attach(18,INPUT_PULLUP);
+    
     switchModePin.attach(19, INPUT_PULLUP);
+    navModePin.attach(18, INPUT_PULLUP);
   
     joystickUP.interval(MILLIDEBOUNCE);
     joystickDOWN.interval(MILLIDEBOUNCE);
@@ -196,8 +208,10 @@ void setupPins(){
     buttonRT.interval(MILLIDEBOUNCE);
     buttonSTART.interval(MILLIDEBOUNCE);
     buttonSELECT.interval(MILLIDEBOUNCE);
-    buttonHOME.interval(MILLIDEBOUNCE);
+    //buttonHOME.interval(MILLIDEBOUNCE);
+    
     switchModePin.interval(MILLIDEBOUNCE);
+    navModePin.interval(MILLIDEBOUNCE);
     
 }
 
@@ -278,7 +292,8 @@ void setup() {
 void loop() {
     buttonRead();   // Buttons state
     checkSensors(); // Sensors state
-    if (switchModePin.fell()){  // MENU mode button is pressed...
+
+    if (switchModePin.fell() && !buttonStatus[NAVMODEPIN]){  // MENU mode button is pressed...
         if(sliderMode == MENU){ // If already in MENU mode, change to CALIBRATE mode...
           sliderModeChange = CALIBRATE;
           sliderMode = CALIBRATE;
@@ -287,6 +302,7 @@ void loop() {
           sliderMode = MENU;
         }
     }
+    
     // Change mode on release only. (avoid false positive inputs in the new selected mode)
     bool swapmode = true;
     if(sliderMode != sliderModeChange){
@@ -304,11 +320,7 @@ void loop() {
       processButtons(); // Processing controller state...
       break;
       case NAVIGATION: // Slider act like a controller with navigations buttons if you lack of buttons on your controller (customize the code below)
-      sliderNavigation(0);
-      processButtons();
-      break;
-      case NAVIGATION2: // Page 2, unused.
-      sliderNavigation(1);
+      sliderNavigation();
       processButtons();
       break;
       case CHUNITHM: // Slider CHUNITHM 8 KEYS
@@ -602,7 +614,7 @@ void sliderGameplay(){
 
   int32_t sliderBits = 0;
   noTouchBits = sliderBits ^ 0x80808080;
-  if(sliderMode != CHUNITHM){
+  if(sliderMode != CHUNITHM && !buttonStatus[NAVMODEPIN]){
     for (bool sensor : sensors)
   {
     if(bit_count >= 0){
@@ -796,7 +808,7 @@ void sliderGameplay(){
   
   }
 
-// Disable specific sensors, and enable the one around them to trigger it. Use if faulty sensors.
+// Disable specific sensors, and enable the one around them to trigger it. Use if faulty sensors. (can be used to diagnose if some sensors trigger without touching)
 void sliderTriggerMode(){
 
   
@@ -821,7 +833,7 @@ void sliderTriggerMode(){
   }
 
 // Act as controllers buttons using virtual buttons on the Slider.
-void sliderNavigation(int page){
+void sliderNavigation(){
 
   // output Default Stick values to not trigger false positive in game
   long resultBits;
@@ -854,8 +866,8 @@ void sliderNavigation(int page){
    * sensors 21-23 : Right | Red
    */
 
-switch(page){
-  case 0:
+/*switch(page){
+  case 0:*/
     // Bumpers/Triggers
     if(sensors[0] || sensors[1] || sensors[2]) {buttonStatus[BUTTONLB] = true;}
     else {buttonStatus[BUTTONLB] = false;}
@@ -869,9 +881,9 @@ switch(page){
     //if(sensors[25]) {buttonStatus[BUTTONR3] = true;}
   
     // DPAD
-    if (sensors[9] || sensors[10] || sensors[11]) {buttonStatus[BUTTONUP] = true;}
+    if (sensors[7] || sensors[8] || sensors[9]) {buttonStatus[BUTTONUP] = true;}
     else {buttonStatus[BUTTONUP] = false;}
-    if (sensors[13] || sensors[14] || sensors[15]) {buttonStatus[BUTTONDOWN] = true;}
+    if (sensors[11] || sensors[12] || sensors[13]) {buttonStatus[BUTTONDOWN] = true;}
     else {buttonStatus[BUTTONDOWN] = false;}
     if (sensors[17] || sensors[18] || sensors[19]) {buttonStatus[BUTTONLEFT] = true;}
     else {buttonStatus[BUTTONLEFT] = false;}
@@ -899,7 +911,7 @@ switch(page){
     leds[12] = leds[13] = leds[14] = colorDownBtn;
     leds[17] = leds[18] = leds[19] = colorLeftBtn;
     leds[21] = leds[22] = leds[23] = colorRightBtn;
-  break;
+  /*break;
   
   case 1: // Page 2 not implemented
   
@@ -918,7 +930,7 @@ switch(page){
     leds[8] = leds[9] = leds[10] = colorShareBtn;
 
   break;
-  }
+  }*/
 }
 
 
@@ -1123,8 +1135,9 @@ void buttonRead(){
     if (buttonRT.update()) {buttonStatus[BUTTONRT] = buttonRT.fell();}
     if (buttonSTART.update()) {buttonStatus[BUTTONSTART] = buttonSTART.fell();}
     if (buttonSELECT.update()) {buttonStatus[BUTTONSELECT] = buttonSELECT.fell();}
-    if (buttonHOME.update()) {buttonStatus[BUTTONHOME] = buttonHOME.fell();}
+    //if (buttonHOME.update()) {buttonStatus[BUTTONHOME] = buttonHOME.fell();}
     if (switchModePin.update()) {buttonStatus[SWITCHMODEPIN] = switchModePin.fell();}
+    if (navModePin.update()) {buttonStatus[NAVMODEPIN] = navModePin.fell();}
 }
 
 
@@ -1142,6 +1155,7 @@ void processButtons(){
 }
 
 void processDPAD(){
+  if (!buttonStatus[NAVMODEPIN]){
     if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONRIGHT])){ReportData.HAT = DPAD_UPRIGHT_MASK_ON;}
     else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONRIGHT])) {ReportData.HAT = DPAD_DOWNRIGHT_MASK_ON;} 
     else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONLEFT])) {ReportData.HAT = DPAD_DOWNLEFT_MASK_ON;}
@@ -1151,22 +1165,56 @@ void processDPAD(){
     else if (buttonStatus[BUTTONLEFT]) {ReportData.HAT = DPAD_LEFT_MASK_ON;}
     else if (buttonStatus[BUTTONRIGHT]) {ReportData.HAT = DPAD_RIGHT_MASK_ON;}
     else{ReportData.HAT = DPAD_NOTHING_MASK_ON;}
+  }else{
+    if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONRIGHT])){ReportData.HAT = DPAD_UPRIGHT_MASK_ON;}
+    else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONRIGHT])) {ReportData.HAT = DPAD_DOWNRIGHT_MASK_ON;} 
+    else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONLEFT])) {ReportData.HAT = DPAD_DOWNLEFT_MASK_ON;}
+    else if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONLEFT])){ReportData.HAT = DPAD_UPLEFT_MASK_ON;}
+    else if (buttonStatus[BUTTONUP]) {ReportData.HAT = DPAD_LEFT_MASK_ON;}
+    else if (buttonStatus[BUTTONDOWN]) {ReportData.HAT = DPAD_RIGHT_MASK_ON;}
+    else if (buttonStatus[BUTTONLEFT]) {ReportData.HAT = DPAD_UP_MASK_ON;}
+    else if (buttonStatus[BUTTONRIGHT]) {ReportData.HAT = DPAD_DOWN_MASK_ON;}
+    else{ReportData.HAT = DPAD_NOTHING_MASK_ON;}
+  }
+    
 }
 
 
 void buttonProcessing(){
-  if (buttonStatus[BUTTONA]) {ReportData.Button |= A_MASK_ON;}
-  if (buttonStatus[BUTTONB]) {ReportData.Button |= B_MASK_ON;}
-  if (buttonStatus[BUTTONX]) {ReportData.Button |= X_MASK_ON;}
-  if (buttonStatus[BUTTONY]) {ReportData.Button |= Y_MASK_ON;}
-  if (buttonStatus[BUTTONLB]) {ReportData.Button |= LB_MASK_ON;}
-  if (buttonStatus[BUTTONRB]) {ReportData.Button |= RB_MASK_ON;}
-  if (buttonStatus[BUTTONLT]) {ReportData.Button |= ZL_MASK_ON;}
-  if (buttonStatus[BUTTONRT]) {ReportData.Button |= ZR_MASK_ON;}
-  if (buttonStatus[BUTTONSTART]){ReportData.Button |= START_MASK_ON;}
-  if (buttonStatus[BUTTONSELECT]){ReportData.Button |= SELECT_MASK_ON;}
-  if (buttonStatus[BUTTONHOME]){ReportData.Button |= HOME_MASK_ON;}
-  // Need more buttons...
+
+  if (!buttonStatus[NAVMODEPIN]){
+    if (buttonStatus[BUTTONA]) {ReportData.Button |= A_MASK_ON;}
+    if (buttonStatus[BUTTONB]) {ReportData.Button |= B_MASK_ON;}
+    if (buttonStatus[BUTTONX]) {ReportData.Button |= X_MASK_ON;}
+    if (buttonStatus[BUTTONY]) {ReportData.Button |= Y_MASK_ON;}
+    if (buttonStatus[BUTTONLB]) {ReportData.Button |= LB_MASK_ON;}
+    if (buttonStatus[BUTTONRB]) {ReportData.Button |= RB_MASK_ON;}
+    if (buttonStatus[BUTTONLT]) {ReportData.Button |= ZL_MASK_ON;}
+    if (buttonStatus[BUTTONRT]) {ReportData.Button |= ZR_MASK_ON;}
+    if (buttonStatus[BUTTONSTART]){ReportData.Button |= START_MASK_ON;}
+    if (buttonStatus[BUTTONSELECT]){ReportData.Button |= SELECT_MASK_ON;}
+    if (buttonStatus[BUTTONHOME]){ReportData.Button |= HOME_MASK_ON;}
+    // Need more buttons...
+  }else{
+    if (buttonStatus[BUTTONA]) {ReportData.Button |= RB_MASK_ON;}
+    if (buttonStatus[BUTTONB]) {ReportData.Button |= ZR_MASK_ON;}
+    if (buttonStatus[BUTTONX]) {ReportData.Button |= LB_MASK_ON;}
+    if (buttonStatus[BUTTONY]) {ReportData.Button |= ZL_MASK_ON;}
+    if (buttonStatus[BUTTONLB]) {ReportData.Button |= X_MASK_ON;}
+    if (buttonStatus[BUTTONRB]) {ReportData.Button |= A_MASK_ON;}
+    if (buttonStatus[BUTTONLT]) {ReportData.Button |= Y_MASK_ON;}
+    if (buttonStatus[BUTTONRT]) {ReportData.Button |= B_MASK_ON;}
+    if (buttonStatus[BUTTONSTART]){ReportData.Button |= CAPTURE_MASK_ON;}
+    if (buttonStatus[BUTTONSELECT]){ReportData.Button |= START_MASK_ON;}
+    if (buttonStatus[SWITCHMODEPIN]){ReportData.Button |= HOME_MASK_ON;}
+    // Need more buttons...
+
+    if (sensors[0] || sensors[1] || sensors[2]){ReportData.Button |= L3_MASK_ON;}
+    if (sensors[31] || sensors[30] || sensors[29]){ReportData.Button |= R3_MASK_ON;}
+    if (sensors[12] || sensors[13] || sensors[16] || sensors[17] || sensors[18] || sensors[19] || sensors[20]){ReportData.Button |= SELECT_MASK_ON;}
+  }
+  
+  
 }
 
 void resetButtons(){
