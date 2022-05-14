@@ -356,6 +356,18 @@ void loop() {
 
 // CALIBRATE MODE
 void calibrateSensors(){  
+
+    // output Default Stick values to not trigger false positive in game
+    long resultBits;
+    int32_t sliderBits = 0;
+    resultBits = sliderBits ^ 0x80808080;
+    // SENDING TO CONTROLLER THE RESULTED VALUES
+    ReportData.RY = (resultBits >> 24) & 0xFF;
+    ReportData.RX = (resultBits >> 16) & 0xFF;
+    ReportData.LY = (resultBits >> 8) & 0xFF;
+    ReportData.LX = (resultBits) & 0xFF;
+
+  
     leds[0] = CRGB::White;
     leds[1] = CRGB::White;
     leds[2] = CRGB::White;
