@@ -150,7 +150,7 @@ const USB_Descriptor_String_t PROGMEM LanguageString = USB_STRING_DESCRIPTOR_ARR
 
 // Manufacturer and Product Descriptor Strings
 const USB_Descriptor_String_t PROGMEM ManufacturerString = USB_STRING_DESCRIPTOR(L"HORI CO.,LTD.");
-const USB_Descriptor_String_t PROGMEM ProductString      = USB_STRING_DESCRIPTOR(L"POKKEN CONTROLLER");
+const USB_Descriptor_String_t PROGMEM ProductString      = USB_STRING_DESCRIPTOR(L"DIVA CONTROLLER");
 
 // USB Device Callback - Get Descriptor
 uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
@@ -204,4 +204,3 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
   *DescriptorAddress = Address;
   return Size;
 }
-
