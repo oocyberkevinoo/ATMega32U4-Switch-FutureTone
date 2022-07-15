@@ -52,8 +52,11 @@ You can switch seamlessly between the 3 modes by pressing START+SELECT.
 - Download Arduino IDE, 
 
 - Download the Bounce2 Library inside the Arduino IDE
-- Download Arduino Lufa from https://github.com/Palatis/Arduino-Lufa and follow the instructions on it's repository
-- Build and Flash for your ATMEGA32U4 Board
+- Add `https://github.com/CrazyRedMachine/Arduino-Lufa/raw/master/package_arduino-lufa_index.json` as an Additional Board Manager URL (in `File -> Preferences` menu)
+(check the repo readme for screencaps if you need more details)
+- Install LUFA AVR Boards from the Board Manager
+- Select Arduino Leonardo (LUFA) as your board type
+- Build and Flash
 - Have Fun
 
 ## Pinmapping (UPDATED FOR THIS FORK !)
