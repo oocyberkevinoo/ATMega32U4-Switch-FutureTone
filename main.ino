@@ -91,6 +91,8 @@ mpr121 mprs[NUM_MPRS];
 
 // Calibration asked on boot
 bool calibrated = false;
+int calibratedCount = 0;
+int calibratedCountNeeded = 26;
 
 // Slider MODES list
 typedef enum {
@@ -131,6 +133,8 @@ byte gameplayLightUp = 0x00;
 int lightUpTimer = 0;
 int lightUpMax = 25*5;
 int lightUpCurrent = 0;
+
+int lightWave = 0;
 
 // Navigation page
 int navigationPage = 1;
@@ -542,12 +546,29 @@ void checkSensors(){
     }
     // CALIBRATION PROCESS IF ASKED OR NEEDED ON BOOT... (calibration results based on the first sensor...)
     if(!calibrated){
+      /*
       short value = mpr.readElectrodeData(0); 
       byte baseline = mpr.readElectrodeBaseline(0);
       value -= ((short)baseline << 2);
       if(value > 0 && value < 5) 
-        calibrated = true;
+        calibrated = true;*/
+        for(i=0; i < NUM_MPRS * 12; i++){
+          short value = mpr.readElectrodeData(i); 
+          byte baseline = mpr.readElectrodeBaseline(i);
+          value -= ((short)baseline << 2);
+          if(value > 0 && value < 5) 
+            calibratedCount++;
+        }
+
+        if(calibratedCount >= calibratedCountNeeded)
+          calibrated = true;
+        else
+          calibratedCount = 0;
+
+        
+        
       }
+      
   }
 
   // Check if at least one sensor is touched (not used)
@@ -667,7 +688,7 @@ void sliderGameplay(){
             }
         }*/
         // Rainbow effect
-      uint8_t thisHue = beat8(15,255); 
+      uint8_t thisHue = beat8(42,255); 
       fill_rainbow(leds, NUM_LEDS_PER_STRIP, thisHue, -15); 
       
 
@@ -693,15 +714,105 @@ void sliderGameplay(){
             }
         }
    
-    }else{
-    for (CRGB &led : leds){
+    }else if(gameplayLightUp == 0x02){
+      
+    // Adjust timer and RGB values for LEDs
+    if(resultBits == noTouchBits){
+      if(lightUpTimer > 0) lightUpTimer--;
+      if(lightUpCurrent < lightUpMax) lightUpCurrent++; 
+    }
+    else{
+      if(lightUpTimer < 25) lightUpTimer = lightUpTimer+2;
+      if(lightUpCurrent > 0) lightUpCurrent = lightUpCurrent-2;
+
+      if(lightUpTimer > 25) lightUpTimer = 25;
+      if(lightUpCurrent < 0) lightUpCurrent = 0;
+    }
+    
+       bool lightUp = true;
+       bool first = true;
+        for (CRGB &led : leds){
+          if(lightUp){
+            if(!first)
+              led = CRGB(lightUpCurrent/5, lightUpCurrent/5, lightUpCurrent/5);
+            else
+              led = CRGB::Black; // Except for the first one
+
+            if(first) first = false;
+            lightUp = false;
+            }
+          else{
+            led = CRGB::Black;
+            lightUp = true;
+            }
+        }
+        
+        for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){  // Lightup the touched sensor
+          if(sensors[i]) leds[i] = CRGB::White;
+
+          // WAVE
+          /*bool wave = true;
+          if(lightWave < 5000 && wave == true){
+            lightWave++;
+            if(lightWave >= 5000) wave = false;
+          }
+          else if(lightWave > 0 && wave == false){
+            lightWave--;
+            if(lightWave <= 0 && sensors[i]) wave = true;
+          }
+
+          for(int i2 = lightWave/1000; i2 > 0; i2--){
+            if(sensors[i]){
+              int left = i-i2;
+              int right = i+i2;
+              if(right <= NUM_LEDS_PER_STRIP-1 && !sensors[i+i2] && leds[i+i2] < leds[i]/90 && (i+i2 != 1 && i+i2 != 3 && i+i2 != 5 && i+i2 != 7 && i+i2 != 9 && i+i2 != 11 && i+i2 != 13 && i+i2 != 15 && i+i2 != 17 && i+i2 != 19 &&i+i2 != 21 && i+i2 != 23 && i+i2 != 25 && i+i2 != 27 && i+i2 != 29 && i+i2 != 31))
+                leds[i+i2] = leds[i]/90;
+              if(left >= 0  && !sensors[i-i2] && leds[i-i2] < leds[i]/90 && (i-i2 != 1 && i-i2 != 3 && i-i2 != 5 && i-i2 != 7 && i-i2 != 9 && i-i2 != 11 && i-i2 != 13 && i-i2 != 15 && i-i2 != 17 && i-i2 != 19 &&i-i2 != 21 && i-i2 != 23 && i-i2 != 25 && i-i2 != 27 && i-i2 != 29 && i-i2 != 31))
+                leds[i-i2] = leds[i]/90;
+            }
+          }*/
+          
+          
+          
+          }
+
+      
+    }
+    else{
+      if(gameplayLightUp == 0x02){ // Arcade Lights Mode
+        // Adjust timer and RGB values for LEDs
+    if(lightUpTimer < 25) lightUpTimer++;
+    if(lightUpCurrent > 0) lightUpCurrent--;
+       bool lightUp = true;
+       bool first = true;
+        for (CRGB &led : leds){
+          if(lightUp && lightUpTimer >= 25){
+            if(!first)
+              led = CRGB(lightUpCurrent/5, lightUpCurrent/5, lightUpCurrent/5);
+            else
+              led = CRGB::Black; // Except for the first one
+
+            if(first) first = false;
+            lightUp = false;
+            }
+          else{
+            led = CRGB::Black;
+            lightUp = true;
+            }
+        }
+      }
+      else{
+        for (CRGB &led : leds){
         led = CRGB::Black;
         }
+      }
+    
     for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){  // Lightup the touched sensor
       if(sensors[i]){
         leds[i] = CRGB::White;
-        if(lightUpCurrent != 0) lightUpCurrent = 0;
-        if(lightUpTimer != 25) lightUpTimer = 25;
+        
+        if(lightUpCurrent != 0 && gameplayLightUp == 0x01) lightUpCurrent = 0;
+        if(lightUpTimer != 25 && gameplayLightUp == 0x01) lightUpTimer = 25;
         }
       }
     }
@@ -1020,7 +1131,7 @@ else if(pushedSettings5){
       pushedSettings6 = true;
     }
   else if(pushedSettings6){
-    updateSettings(5, 0x01);
+    updateSettings(5, 0x02);
     settingsLoader();
     pushedSettings6 = false;
     } 
@@ -1110,6 +1221,9 @@ else if(pushedSettings5){
     break;
     case 0x01:
     leds[22] = leds[23] = CRGB::Green;
+    break;
+    case 0x02:
+    leds[22] = leds[23] = CRGB::White;
     break;
     default: leds[22] = leds[23] = CRGB::Red;
   }
