@@ -9,6 +9,9 @@ You'll need the exact same hardware and libraries as the original repo (+ The [Q
 
 Thanks to [Somewhatlurker](https://github.com/somewhatlurker), [Dogtopus](https://github.com/dogtopus/), [TheCorrellRoyHD](https://twitter.com/correllroy), [Zedamex](https://www.youtube.com/channel/UCZ-jUHyriPCuebtpx48MPdQ) for all the needed datas, informations, and help on developping this project.
 
+## Preview of the slider with the 3 different Leds modes available (HORI, HORI+Arcade, Arcade)
+![Gif Loading...](ezgif-1-74ecb11183.gif)
+
 
 ## LUFA & QuickMPR121 use
 ### LUFA
