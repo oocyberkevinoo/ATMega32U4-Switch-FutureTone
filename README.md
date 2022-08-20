@@ -1,6 +1,7 @@
 ## Project Diva Controller (Switch)
 
 (A LOT OF NEW TIPS AND HELP INFORMATIONS HAVE BEEN ADDED, PLEASE CHECK "HELP.TXT"
+
 A "UPDATE LOG.TXT" IS ALSO AVAILABLE)
 
 This repo is a fork from the [fluffymadness/ATMega32U4-Switch-Fightstick repo](https://github.com/fluffymadness/ATMega32U4-Switch-Fightstick)
