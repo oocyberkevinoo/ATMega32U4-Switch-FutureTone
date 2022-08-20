@@ -124,6 +124,9 @@ bool pushedSettings3 = false;
 bool pushedSettings4 = false;
 bool pushedSettings5 = false;
 bool pushedSettings6 = false;
+bool pushedSettings7 = false;
+bool pushedSettings8 = false;
+bool pushedSettings9 = false;
 byte sliderFilter1 = 0x00;
 byte sliderFilter2 = 0x00;
 byte sliderOffsetRelease = 0x00;
@@ -376,6 +379,7 @@ void calibrateSensors(){
     leds[1] = CRGB::White;
     leds[2] = CRGB::White;
     calibrated = false;
+    calibratedCount = 0;
     for (int i = 0; i < NUM_MPRS; i++) {
       mpr121 &mpr = mprs[i];
       mpr.softReset();
@@ -469,8 +473,37 @@ int SensitivityLoad(){  // Sensitivity of sensors
       case 0x04:
       return 0;
       break;
+      case 0x05:
+      return 5;
+      break;
+      case 0x06:
+      return 6;
+      break;
       default:
       return 2;
+      }
+    }
+
+    int CalibrationStrength(){ // Calibration Strength
+    switch(EEPROM.read(6)){
+      case 0x00:
+      return 26;
+      break;
+      case 0x01:
+      return 30;
+      break;
+      case 0x02:
+      return 32;
+      break;
+      case 0x03:
+      return 1;
+      break;
+      case 0x04:
+      return 12;
+      break;
+      break;
+      default:
+      return 26;
       }
     }
 
@@ -552,6 +585,9 @@ void checkSensors(){
       value -= ((short)baseline << 2);
       if(value > 0 && value < 5) 
         calibrated = true;*/
+
+        calibratedCountNeeded = CalibrationStrength();
+        
         for(i=0; i < NUM_MPRS * 12; i++){
           short value = mpr.readElectrodeData(i); 
           byte baseline = mpr.readElectrodeBaseline(i);
@@ -1071,17 +1107,20 @@ void sliderSettings(){
   ReportData.LX = (resultBits) & 0xFF;
 
   processButtons();
-  
+  bool testingLeds = false;
   // Virtual Buttons :
   // LED's Brightness
   if(sensors[0] || sensors[1] || sensors[2]) { 
-    if(!pushedSettings1)
+    if(!pushedSettings1){
+      updateSettings(0, 0x06);
+      FastLED.setBrightness(LEDBrightnessLoad());
       pushedSettings1 = true;
+    }else
+      testingLeds = true;
     }
   else if(pushedSettings1){
-    updateSettings(0, 0x06);
-    FastLED.setBrightness(LEDBrightnessLoad());
     pushedSettings1 = false;
+    testingLeds = false;
     } 
   
   // MPR121's sensitivity (How sensitive to touch it is ?)
@@ -1099,7 +1138,7 @@ void sliderSettings(){
     pushedSettings5 = true;
   }
 else if(pushedSettings5){
-  updateSettings(4, 0x04);
+  updateSettings(4, 0x06);
   pushedSettings5 = false;
   } 
 
@@ -1136,13 +1175,65 @@ else if(pushedSettings5){
     pushedSettings6 = false;
     } 
 
+    // Calibrating Level (s 30-31) setting 6
+    if(sensors[30] || sensors[31]) { 
+    if(!pushedSettings7)
+      pushedSettings7 = true;
+    }
+  else if(pushedSettings7){
+    updateSettings(6, 0x04);
+    settingsLoader();
+    pushedSettings7 = false;
+    } 
+
+    // Saving Settings
+    if(buttonStatus[NAVMODEPIN]) { 
+    if(!pushedSettings8)
+      pushedSettings8 = true;
+    }
+  else if(pushedSettings8){
+    EEPROM.write(10, EEPROM.read(0));
+    EEPROM.write(11, EEPROM.read(1));
+    EEPROM.write(12, EEPROM.read(2));
+    EEPROM.write(13, EEPROM.read(3));
+    EEPROM.write(14, EEPROM.read(4));
+    EEPROM.write(15, EEPROM.read(5));
+    EEPROM.write(16, EEPROM.read(6));
+    settingsLoader();
+    pushedSettings8 = false;
+    } 
+    
+    // Loading Settings
+    if(buttonStatus[BUTTONSTART]) { 
+    if(!pushedSettings9)
+      pushedSettings9 = true;
+    }
+  else if(pushedSettings9){
+    EEPROM.write(0, EEPROM.read(10));
+    EEPROM.write(1, EEPROM.read(11));
+    EEPROM.write(2, EEPROM.read(12));
+    EEPROM.write(3, EEPROM.read(13));
+    EEPROM.write(4, EEPROM.read(14));
+    EEPROM.write(5, EEPROM.read(15));
+    EEPROM.write(6, EEPROM.read(16));
+    settingsLoader();
+    FastLED.setBrightness(LEDBrightnessLoad());
+    pushedSettings9 = false;
+    } 
 
   
   // LEDS output
-  for (CRGB &led : leds){
+for (CRGB &led : leds){
         led = CRGB::Black;
         }
+        
   leds[0] = leds[1] = leds[2] = CRGB::Red;
+
+  if(testingLeds){
+    leds[13] = leds[15] = leds[17] = leds[19] = CRGB::White;
+    return;
+    } 
+  
   switch(EEPROM.read(1)){ // MPR121's sensitivity
     case 0x00:
     leds[4] = leds[5] = leds[6] = CRGB::Red;
@@ -1189,6 +1280,12 @@ else if(pushedSettings5){
     case 0x04:
     leds[7] = leds[8] = CRGB::Red;
     break;
+    case 0x05:
+    leds[7] = leds[8] = CRGB::Purple;
+    break;
+    case 0x06:
+    leds[7] = leds[8] = CRGB::Pink;
+    break;
     default: leds[4] = leds[5] = leds[6] = CRGB::White;
   }
   switch(EEPROM.read(2)){ // MPR121's Filter
@@ -1227,13 +1324,25 @@ else if(pushedSettings5){
     break;
     default: leds[22] = leds[23] = CRGB::Red;
   }
+  switch(EEPROM.read(6)){ // Calibration Strength
+    case 0x00:
+    leds[30] = leds[31] = CRGB::Blue;
+    break;
+    case 0x01:
+    leds[30] = leds[31] = CRGB::Cyan;
+    break;
+    case 0x02:
+    leds[30] = leds[31] = CRGB::Red;
+    break;
+    case 0x03:
+    leds[30] = leds[31] = CRGB::Yellow;
+    break;
+    case 0x04:
+    leds[30] = leds[31] = CRGB::Green;
+    break;
+    default: leds[30] = leds[31] = CRGB::Blue;
+  }
 
-
-  // Sensibiliy Check
-  /*mpr121 mprSensor32 = mprs[2];
-  short* ledBrightness = mprSensor32.readElectrodeData(7, 1) * 255.0f;
-  leds[31] = CRGB(ledBrightness[0], ledBrightness[0], ledBrightness[0]);*/
-  
 }
 
 // Saving Settings in EEPROM

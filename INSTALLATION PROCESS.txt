@@ -1,0 +1,73 @@
+This file will contain all the informations needed to make your slider correctly.
+(For the settings, and different modes, PLEASE CHECK THE IMAGES "Slider XXXX.png" for more informations.)
+ 
+- Installation:
+	(Not Available for now, please follow the ReadMe as you can, and use this project only if you know what you're doing)
+
+- Reuploading code after the first upload ???
+	PLEASE READ CAREFULY THIS SECTION !!!
+	When you want to reupload code to your Arduino, you'll need to shortcut the RESET pin twice to enter RESET mode. 
+	(make a button for it, it's way easier)
+	You have to do that while the Arduino Studio upload is searching for your Arduino.
+	Use windows audio notification to hear if the Arduino is in RESET mode.
+	
+	WARNING:
+	If you are in Reset mode, but Arduino Studios didn't find it, it's because the second shortcut wasn't correctly timed.
+	(make the two shortcuts/click on the buttons) Nice and slowly, do not rush the process.)
+	
+	IF YOU ARE IN RESET MODE BUT IT DIDN'T UPLOADED, DO NOT TOUCH ANYTHING, YOUR ARDUINO WILL COME BACK IN WORKING STATE
+	AFTER 8 SECONDS! You'll hear another WIndows Notification, and you'll see your slider having activity
+
+	It's a difficult process that can easily block your arduino in a state you don't want 
+	(waiting without connecting it can unblock it, it's "never" bricked)
+
+- Buttons descriptions:
+The ReadMe of this project contain the PinMapping to see what button goes to what Pin on your Arduino.
+The functions buttons are...
+	Switch Mode Button: 
+		Let you change the actual mode of the Slider.
+		So you can go in the Settings Mode, Navigation Mode if you lack of buttons to navigate in game, etc...
+	Navigation Button:
+		When you hold this button, all your buttons switch to other buttons, so if you lack of buttons on your
+		controller, you'll have everything available. The Slider itself can be used as buttons.
+
+
+- SAVE SETTINGS:
+You can now Save and Load settings, so you can try a lot of different settings without worrying losing a working one.
+When you are in Settings Mode:
+	you can simply SAVE by pressing the Navigation Button, 
+	and LOAD by pressing the START Button.
+
+- Help for settings:
+If you're not sure how to configure your slider, here some tips for each settings:
+
+	Leds:
+		Just make your leds at the power you want, depending of your current, 
+		you will need to make it lower if you don't want to see the power going down time to time.
+
+	Sensitivity:
+		There is 2 options here : the touching threshold, and the release offset.
+		Stronger you make your Touching Threshold, more you'll have to press the Slider to detect your fingers.
+		Stronger you make your Release Offset, less it will keep trace of your finger once you touched it.
+		
+		So if you feel like it don't detect when touching, make Touch Threshold weaker.
+		If you feel like the sensor loss trace of your finger while sliding, make Release Offset weaker.
+
+	Filters Levels:
+		Those are here to help you if you have false positive, but you don't want threshold settings to be stronger.
+		The first one is the MPR Filter, it will change how many cycles the sensor have to be triggered before confirming it.
+		The second one is a Custom filter that does the same, but at execution level.
+		Please try to avoid using them, as it will create easier some holes in your sliding movement when you're going too fast.
+
+	Leds Modes:
+		Three modes are available:
+		HORI -> When not touching, all LEDs are off, and only the touched sensors light up. (like the HORI controller)
+		HORI + Arcade -> When not touching, the slider light up slowly.
+		Arcade -> Same as the second one, but it also light off slowly, still slightly faster. (like the Arcade controller)
+
+	Calibrate Strength:
+		When you connect your controller, or pressing Switch Mode button twice, you enter the Calibration Phase. (Rainbow animation)
+		DO NOT TOUCH THE SENSORS WHILE CALIBRATING !
+		The strength setting ask how much Sensors should be validated before giving you control.
+		More there is, more you slider have to have no issue to end the calibration.
+		Less there is, more you'll have errors touching the sliders when you start touching it, but will end calibration still and should works.
