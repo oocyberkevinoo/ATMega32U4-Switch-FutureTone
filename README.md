@@ -1,5 +1,8 @@
 ## Project Diva Controller (Switch)
 
+(A LOT OF NEW TIPS AND HELP INFORMATIONS HAVE BEEN ADDED, PLEASE CHECK HELP.TXT)
+(A UPDATELOG.TXT IS ALSO AVAILABLE)
+
 This repo is a fork from the [fluffymadness/ATMega32U4-Switch-Fightstick repo](https://github.com/fluffymadness/ATMega32U4-Switch-Fightstick)
 made to create a custom Arcade Controller for Hatsune Miku: Project Diva Mega39's/MegaMix that use the Dedicated Arcade Controller mode like the official HORI controller.
 
