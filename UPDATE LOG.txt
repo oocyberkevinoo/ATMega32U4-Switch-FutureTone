@@ -1,0 +1,17 @@
+20/08/2022 - Saves + Calibration + Leds settings
+- When in settings mode, you can press NAVIGATION button to save your current settings, 
+and START to load the settings saved.
+
+- New setting for calibration strength (see the image doc on Settings for more informations)
+
+- New way to show leds when changing the LEDs setting
+
+
+17/08/2022 - LEDS + Calibration + New Sensitivity options
+- A new mode of Lights is available, if you go to settings and set the Leds setting to White, it will act like the Green option (Light up when not touching) but add transition time to be a more accurate to Arcade Leds.
+This mode will be upgraded later to be even more Arcade accurate.
+
+- Calibration now don't check only one sensor, but wait for at least X sensors to be calibrated. (default value is 26 sensors, edit the calibratedCountNeeded value to change it)
+
+- Speed of Rainbow animation is now the same as the Rainbow effect on the Arcade cab
+
