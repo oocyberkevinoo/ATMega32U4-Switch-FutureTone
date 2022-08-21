@@ -127,10 +127,15 @@ bool pushedSettings6 = false;
 bool pushedSettings7 = false;
 bool pushedSettings8 = false;
 bool pushedSettings9 = false;
+
+bool navigationPressed = false;
+bool navigationShortcut = false;
+
 byte sliderFilter1 = 0x00;
 byte sliderFilter2 = 0x00;
 byte sliderOffsetRelease = 0x00;
 byte gameplayLightUp = 0x00;
+
 
 // Slider LightUp Effect
 int lightUpTimer = 0;
@@ -683,7 +688,7 @@ void sliderGameplay(){
 
   int32_t sliderBits = 0;
   noTouchBits = sliderBits ^ 0x80808080;
-  if(sliderMode != CHUNITHM && !buttonStatus[NAVMODEPIN]){
+  if(sliderMode != CHUNITHM && !navigationShortcut){
     for (bool sensor : sensors)
   {
     if(bit_count >= 0){
@@ -706,7 +711,19 @@ void sliderGameplay(){
 
   if(sliderMode == GAMEPLAY){ // Slider in GAMEPLAY move (Future Tone/ Mega Mix mode)
     
+    if(buttonStatus[NAVMODEPIN]) { 
+    if(!navigationPressed){
+      if(!navigationShortcut) navigationShortcut = true;
+      else navigationShortcut = false;
+      navigationPressed = true;
+      }
+      
+    }
+  else if(navigationPressed){
     
+    
+    navigationPressed = false;
+    }
 
     // LEDS
   if(!calibrated){ // When calibrating...
@@ -1380,6 +1397,7 @@ void buttonRead(){
  * Processing Buttons & Dpad
  */
 void processButtons(){
+  
   switch (state) // Can create other states to act differently...
   {
     case DIGITAL:
@@ -1390,7 +1408,7 @@ void processButtons(){
 }
 
 void processDPAD(){
-  if (!buttonStatus[NAVMODEPIN]){
+  if (!navigationShortcut){
     if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONRIGHT])){ReportData.HAT = DPAD_UPRIGHT_MASK_ON;}
     else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONRIGHT])) {ReportData.HAT = DPAD_DOWNRIGHT_MASK_ON;} 
     else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONLEFT])) {ReportData.HAT = DPAD_DOWNLEFT_MASK_ON;}
@@ -1416,8 +1434,8 @@ void processDPAD(){
 
 
 void buttonProcessing(){
-
-  if (!buttonStatus[NAVMODEPIN]){
+  
+  if (!navigationShortcut){
     if (buttonStatus[BUTTONA]) {ReportData.Button |= A_MASK_ON;}
     if (buttonStatus[BUTTONB]) {ReportData.Button |= B_MASK_ON;}
     if (buttonStatus[BUTTONX]) {ReportData.Button |= X_MASK_ON;}
@@ -1446,7 +1464,12 @@ void buttonProcessing(){
 
     if (sensors[0] || sensors[1] || sensors[2]){ReportData.Button |= L3_MASK_ON;}
     if (sensors[31] || sensors[30] || sensors[29]){ReportData.Button |= R3_MASK_ON;}
-    if (sensors[12] || sensors[13] || sensors[16] || sensors[17] || sensors[18] || sensors[19] || sensors[20]){ReportData.Button |= SELECT_MASK_ON;}
+    if (sensors[12] || sensors[13] || sensors[14] || sensors[15] || sensors[16] || sensors[17] || sensors[18] || sensors[19] || sensors[20]){ReportData.Button |= SELECT_MASK_ON;}
+
+    leds[0] = leds[1] = leds[2] = CRGB::Cyan;
+    leds[31] = leds[30] = leds[29] = CRGB::Cyan;
+    leds[12] = leds[13] = leds[14] = leds[15] = leds[16] = leds[17] = leds[18] = leds[19] = leds[20] = CRGB::Cyan;
+    
   }
   
   
