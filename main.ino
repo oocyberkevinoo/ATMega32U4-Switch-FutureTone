@@ -390,6 +390,7 @@ void calibrateSensors(){
       mpr.softReset();
     }
     sliderModeChange = GAMEPLAY;
+    sliderMode = GAMEPLAY;
     sensorsInitialization();
   }
 
@@ -647,8 +648,15 @@ void sliderMenu(){
    
     //Virtual Buttons of menu
   if (!buttonStatus[SWITCHMODEPIN])
-  {    
-    if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]] || sensors[sensorsArcade[4]])
+  { 
+    if(buttonStatus[BUTTONHOME]){
+      if(sliderGameplayEnabled)
+        sliderGameplayEnabled = false;
+      else
+        sliderGameplayEnabled = true;  
+      sliderModeChange = GAMEPLAY;
+      }   
+    else if(sensors[sensorsArcade[0]] || sensors[sensorsArcade[1]] || sensors[sensorsArcade[2]] || sensors[sensorsArcade[3]] || sensors[sensorsArcade[4]])
       sliderModeChange = SETTINGS;
     else if(sensors[sensorsNav[0]] || sensors[sensorsNav[1]] || sensors[sensorsNav[2]] || sensors[sensorsNav[3]] || sensors[sensorsNav[4]])
       sliderModeChange = NAVIGATION;
@@ -658,13 +666,6 @@ void sliderMenu(){
       sliderModeChange = GAMEPLAY;
     else if(buttonStatus[BUTTONX])
       sliderModeChange = TRIGGER;
-    else if(buttonStatus[BUTTONHOME]){
-      if(sliderGameplayEnabled)
-        sliderGameplayEnabled = false;
-      else
-        sliderGameplayEnabled = true;  
-      sliderModeChange = GAMEPLAY;
-      }
       
     
   }
@@ -729,20 +730,9 @@ void sliderGameplay(){
   if(!calibrated){ // When calibrating...
     
     bool lightUp = true;
-    /*  Previously was just white while calibrating.
-      for (CRGB &led : leds){
-        if(lightUp){
-          led = CRGB::White;
-          lightUp = false;
-          }
-          else{
-            led = CRGB::Black;
-            lightUp = true;
-            }
-        }*/
-        // Rainbow effect
-      uint8_t thisHue = beat8(42,255); 
-      fill_rainbow(leds, NUM_LEDS_PER_STRIP, thisHue, -15); 
+    // Rainbow effect
+    uint8_t thisHue = beat8(42,255); 
+    fill_rainbow(leds, NUM_LEDS_PER_STRIP, thisHue, -15); 
       
 
   }else if(resultBits == noTouchBits && gameplayLightUp == 0x01){   // White pannel when not touching, with transition and buffer to make it smooth
