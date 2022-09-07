@@ -230,6 +230,8 @@ void setupPins(){
 // Initialise the MPR121s on boot or calibration
 void sensorsInitialization(){
 
+  
+
     for (int i = 0; i < NUM_MPRS; i++) {
     // this special line makes `mpr` the same as typing `mprs[i]`
     mpr121 &mpr = mprs[i];
@@ -350,9 +352,11 @@ void loop() {
       break;
       case TRIGGER: // Disable faulty sensor
       sliderTriggerMode();
+      processButtons();
       break;
       case CALIBRATE: // Calibrate slider
       calibrateSensors();
+      processButtons();
       break;
     }
 
@@ -977,6 +981,16 @@ void sliderGameplay(){
 // Disable specific sensors, and enable the one around them to trigger it. Use if faulty sensors. (can be used to diagnose if some sensors trigger without touching)
 void sliderTriggerMode(){
 
+  // output Default Stick values to not trigger false positive in game
+    long resultBits;
+    int32_t sliderBits = 0;
+    resultBits = sliderBits ^ 0x80808080;
+    // SENDING TO CONTROLLER THE RESULTED VALUES
+    ReportData.RY = (resultBits >> 24) & 0xFF;
+    ReportData.RX = (resultBits >> 16) & 0xFF;
+    ReportData.LY = (resultBits >> 8) & 0xFF;
+    ReportData.LX = (resultBits) & 0xFF;
+
   
   for (CRGB &led : leds){
           led = CRGB::Green;
@@ -1456,6 +1470,10 @@ void buttonProcessing(){
     if (sensors[31] || sensors[30] || sensors[29]){ReportData.Button |= R3_MASK_ON;}
     if (sensors[12] || sensors[13] || sensors[14] || sensors[15] || sensors[16] || sensors[17] || sensors[18] || sensors[19] || sensors[20]){ReportData.Button |= SELECT_MASK_ON;}
 
+    // LEDS output
+    for (CRGB &led : leds){
+      led = CRGB::Black;
+    }
     leds[0] = leds[1] = leds[2] = CRGB::Cyan;
     leds[31] = leds[30] = leds[29] = CRGB::Cyan;
     leds[12] = leds[13] = leds[14] = leds[15] = leds[16] = leds[17] = leds[18] = leds[19] = leds[20] = CRGB::Cyan;
