@@ -1,3 +1,7 @@
+11/10/2022 - Calibration mehod update
+- The slider is now completely muted while calibrating
+- While calibrating, Joystick output is nullified
+
 21/08/2022 - NAV button update
 - No longer need to hold NAV button to change buttons mapping
 - Visual added for Slider shortcuts in NAV shortcut mode

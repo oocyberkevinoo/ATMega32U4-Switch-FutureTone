@@ -307,7 +307,7 @@ void loop() {
     buttonRead();   // Buttons state
     checkSensors(); // Sensors state
 
-    if (switchModePin.fell() && !buttonStatus[NAVMODEPIN]){  // MENU mode button is pressed...
+    if (switchModePin.fell() && !buttonStatus[NAVMODEPIN] && calibrated){  // MENU mode button is pressed...
         if(sliderMode == MENU){ // If already in MENU mode, change to CALIBRATE mode...
           sliderModeChange = CALIBRATE;
           sliderMode = CALIBRATE;
@@ -584,6 +584,7 @@ void checkSensors(){
       else if(touchedSensors > 0)
         touchedSensors--;
 
+
       // Next sensor...
       sensorCount++;
     }
@@ -701,6 +702,7 @@ void sliderGameplay(){
     if(sensor)
       sliderBits |= (1l << bit_count); // Add sensor state to the byte array.
     bit_count -= 1;
+    
     }
   }
     }
@@ -716,7 +718,7 @@ void sliderGameplay(){
 
   if(sliderMode == GAMEPLAY){ // Slider in GAMEPLAY move (Future Tone/ Mega Mix mode)
     
-    if(buttonStatus[NAVMODEPIN]) { 
+    if(buttonStatus[NAVMODEPIN] && calibrated) { 
     if(!navigationPressed){
       if(!navigationShortcut) navigationShortcut = true;
       else navigationShortcut = false;
@@ -972,6 +974,18 @@ void sliderGameplay(){
       }
     }
   
+  }
+
+  // Muting sensors if calibrating
+  if(!calibrated)
+  {
+    sliderBits = 0;
+    resultBits = sliderBits ^ 0x80808080;
+    // SENDING TO CONTROLLER THE RESULTED VALUES
+    ReportData.RY = (resultBits >> 24) & 0xFF;
+    ReportData.RX = (resultBits >> 16) & 0xFF;
+    ReportData.LY = (resultBits >> 8) & 0xFF;
+    ReportData.LX = (resultBits) & 0xFF;
   }
   
   
