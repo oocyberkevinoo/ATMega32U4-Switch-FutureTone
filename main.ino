@@ -127,6 +127,7 @@ bool pushedSettings6 = false;
 bool pushedSettings7 = false;
 bool pushedSettings8 = false;
 bool pushedSettings9 = false;
+bool pushedSettings10 = false;
 
 bool navigationPressed = false;
 bool navigationShortcut = false;
@@ -517,6 +518,17 @@ int SensitivityLoad(){  // Sensitivity of sensors
       }
     }
 
+    bool NAVShortcut(){
+switch(EEPROM.read(7)){
+  case 0x01:
+  return true;
+  break;
+  default:
+  return false;
+}
+      
+    }
+
 /*
  * SLIDER ENGINE
  */
@@ -718,7 +730,7 @@ void sliderGameplay(){
 
   if(sliderMode == GAMEPLAY){ // Slider in GAMEPLAY move (Future Tone/ Mega Mix mode)
     
-    if(buttonStatus[NAVMODEPIN] && calibrated) { 
+    if(buttonStatus[NAVMODEPIN] /*&& calibrated*/) { 
     if(!navigationPressed){
       if(!navigationShortcut) navigationShortcut = true;
       else navigationShortcut = false;
@@ -727,9 +739,10 @@ void sliderGameplay(){
       
     }
   else if(navigationPressed){
-    
-    
     navigationPressed = false;
+    if(NAVShortcut()){
+      navigationShortcut = false;
+      }
     }
 
     // LEDS
@@ -1210,6 +1223,19 @@ else if(pushedSettings5){
     pushedSettings6 = false;
     } 
 
+
+    // NAV Shortcut (s 27-28)
+    if(sensors[27] || sensors[28]) { 
+    if(!pushedSettings10)
+      pushedSettings10 = true;
+    }
+  else if(pushedSettings10){
+    updateSettings(7, 0x01);
+    settingsLoader();
+    pushedSettings10 = false;
+    } 
+    
+
     // Calibrating Level (s 30-31) setting 6
     if(sensors[30] || sensors[31]) { 
     if(!pushedSettings7)
@@ -1234,6 +1260,7 @@ else if(pushedSettings5){
     EEPROM.write(14, EEPROM.read(4));
     EEPROM.write(15, EEPROM.read(5));
     EEPROM.write(16, EEPROM.read(6));
+    EEPROM.write(17, EEPROM.read(7));
     settingsLoader();
     pushedSettings8 = false;
     } 
@@ -1251,6 +1278,7 @@ else if(pushedSettings5){
     EEPROM.write(4, EEPROM.read(14));
     EEPROM.write(5, EEPROM.read(15));
     EEPROM.write(6, EEPROM.read(16));
+    EEPROM.write(7, EEPROM.read(17));
     settingsLoader();
     FastLED.setBrightness(LEDBrightnessLoad());
     pushedSettings9 = false;
@@ -1376,6 +1404,15 @@ for (CRGB &led : leds){
     leds[30] = leds[31] = CRGB::Green;
     break;
     default: leds[30] = leds[31] = CRGB::Blue;
+  }
+  switch(EEPROM.read(7)){ // Nav Shortcut
+    case 0x00:
+    leds[27] = leds[28] = CRGB::Red;
+    break;
+    case 0x01:
+    leds[27] = leds[28] = CRGB::Green;
+    break;
+    default: leds[27] = leds[27] = CRGB::Red;
   }
 
 }

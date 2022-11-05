@@ -24,12 +24,15 @@ This file will contain all the informations needed to make your slider correctly
 - Buttons descriptions:
 The ReadMe of this project contain the PinMapping to see what button goes to what Pin on your Arduino.
 The functions buttons are...
+
 	Switch Mode Button: 
 		Let you change the actual mode of the Slider.
 		So you can go in the Settings Mode, Navigation Mode if you lack of buttons to navigate in game, etc...
+
 	Navigation Button:
-		When you hold this button, all your buttons switch to other buttons, so if you lack of buttons on your
+		When you press this button, all your buttons switch to other buttons, so if you lack of buttons on your
 		controller, you'll have everything available. The Slider itself can be used as buttons.
+		(You can select if you need to hold it in Settings)
 
 
 - SAVE SETTINGS:
@@ -64,6 +67,10 @@ If you're not sure how to configure your slider, here some tips for each setting
 		HORI -> When not touching, all LEDs are off, and only the touched sensors light up. (like the HORI controller)
 		HORI + Arcade -> When not touching, the slider light up slowly.
 		Arcade -> Same as the second one, but it also light off slowly, still slightly faster. (like the Arcade controller)
+
+	NAV MODE:
+		RED -> Press/Release mode for NAV shortcut button
+		GREEN -> Hold mode for NAV shortcut button
 
 	Calibrate Strength:
 		When you connect your controller, or pressing Switch Mode button twice, you enter the Calibration Phase. (Rainbow animation)

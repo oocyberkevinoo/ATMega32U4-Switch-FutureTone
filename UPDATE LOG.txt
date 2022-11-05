@@ -1,3 +1,7 @@
+24/10/2022 - Navigation Mode Shortcut
+- You can now set how the Navigation Button works : while pressing or push/release
+- Fixed colors when using the NAV mode
+
 11/10/2022 - Calibration mehod update
 - The slider is now completely muted while calibrating
 - While calibrating, Joystick output is nullified
