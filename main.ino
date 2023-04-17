@@ -138,6 +138,7 @@ byte sliderOffsetRelease = 0x00;
 byte gameplayLightUp = 0x00;
 
 
+
 // Slider LightUp Effect
 int lightUpTimer = 0;
 int lightUpMax = 25*5;
@@ -301,10 +302,16 @@ void setup() {
   ledsInitialization();         // Initialise Leds...
   SetupHardware();              // Setup Hardware...
   GlobalInterruptEnable();
+
+  
 }
 
 // Arduino Loop process...
 void loop() {
+
+  if(!PDM_PC){ // if not in PC Maintenance mode
+      
+  
     buttonRead();   // Buttons state
     checkSensors(); // Sensors state
 
@@ -361,7 +368,29 @@ void loop() {
       break;
     }
 
+  }else{ // PC Maintenance Mode
     
+    //LEDS
+    for (CRGB &led : leds){
+      led = CRGB::Black;
+    }
+    leds[2] = CRGB::Red;
+    leds[3] = CRGB::Green;
+    leds[4] = CRGB::Blue;
+  
+    // Wait for commands...
+    bool PDM_PC_busy = false;
+    SM_ReportDataIN.SM_REQ = 0x11;
+    SM_ReportDataIN.SM_DATA = 0x12;
+
+    
+    if(PDM_PC_busy) // if upload is engaged, LEDS are red to warn to not disconnect the controller, just in case the upload is slow for whatever reason.
+      leds[6] = CRGB::Red;
+      else
+      leds[6] = CRGB::Black;
+ 
+    
+  }
     
     HID_Task();
     // We also need to run the main USB management task.
@@ -520,7 +549,7 @@ int SensitivityLoad(){  // Sensitivity of sensors
 
     bool NAVShortcut(){
 switch(EEPROM.read(7)){
-  case 0x01:
+  case 0x00:
   return true;
   break;
   default:
@@ -591,10 +620,10 @@ void checkSensors(){
         }
 
         // How many sensors touched ? (not used)
-      if(touching)
+      /*if(touching)
         touchedSensors++;
       else if(touchedSensors > 0)
-        touchedSensors--;
+        touchedSensors--;*/
 
 
       // Next sensor...
@@ -631,9 +660,9 @@ void checkSensors(){
   }
 
   // Check if at least one sensor is touched (not used)
-  if(touchedSensors > 0){
+  /*if(touchedSensors > 0){
     sensorTouched = true;
-    }
+    }*/
 }
 
 // Is a sensor has been just touched ? (Unused)
@@ -811,30 +840,8 @@ void sliderGameplay(){
         
         for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){  // Lightup the touched sensor
           if(sensors[i]) leds[i] = CRGB::White;
-
-          // WAVE
-          /*bool wave = true;
-          if(lightWave < 5000 && wave == true){
-            lightWave++;
-            if(lightWave >= 5000) wave = false;
-          }
-          else if(lightWave > 0 && wave == false){
-            lightWave--;
-            if(lightWave <= 0 && sensors[i]) wave = true;
-          }
-
-          for(int i2 = lightWave/1000; i2 > 0; i2--){
-            if(sensors[i]){
-              int left = i-i2;
-              int right = i+i2;
-              if(right <= NUM_LEDS_PER_STRIP-1 && !sensors[i+i2] && leds[i+i2] < leds[i]/90 && (i+i2 != 1 && i+i2 != 3 && i+i2 != 5 && i+i2 != 7 && i+i2 != 9 && i+i2 != 11 && i+i2 != 13 && i+i2 != 15 && i+i2 != 17 && i+i2 != 19 &&i+i2 != 21 && i+i2 != 23 && i+i2 != 25 && i+i2 != 27 && i+i2 != 29 && i+i2 != 31))
-                leds[i+i2] = leds[i]/90;
-              if(left >= 0  && !sensors[i-i2] && leds[i-i2] < leds[i]/90 && (i-i2 != 1 && i-i2 != 3 && i-i2 != 5 && i-i2 != 7 && i-i2 != 9 && i-i2 != 11 && i-i2 != 13 && i-i2 != 15 && i-i2 != 17 && i-i2 != 19 &&i-i2 != 21 && i-i2 != 23 && i-i2 != 25 && i-i2 != 27 && i-i2 != 29 && i-i2 != 31))
-                leds[i-i2] = leds[i]/90;
-            }
-          }*/
-          
-          
+      
+     
           
           }
 
@@ -1407,12 +1414,12 @@ for (CRGB &led : leds){
   }
   switch(EEPROM.read(7)){ // Nav Shortcut
     case 0x00:
-    leds[27] = leds[28] = CRGB::Red;
-    break;
-    case 0x01:
     leds[27] = leds[28] = CRGB::Green;
     break;
-    default: leds[27] = leds[27] = CRGB::Red;
+    case 0x01:
+    leds[27] = leds[28] = CRGB::Red;
+    break;
+    default: leds[27] = leds[28] = CRGB::Red;
   }
 
 }
@@ -1516,18 +1523,25 @@ void buttonProcessing(){
     if (buttonStatus[BUTTONSELECT]){ReportData.Button |= START_MASK_ON;}
     if (buttonStatus[SWITCHMODEPIN]){ReportData.Button |= HOME_MASK_ON;}
     // Need more buttons...
-
-    if (sensors[0] || sensors[1] || sensors[2]){ReportData.Button |= L3_MASK_ON;}
-    if (sensors[31] || sensors[30] || sensors[29]){ReportData.Button |= R3_MASK_ON;}
-    if (sensors[12] || sensors[13] || sensors[14] || sensors[15] || sensors[16] || sensors[17] || sensors[18] || sensors[19] || sensors[20]){ReportData.Button |= SELECT_MASK_ON;}
-
+    
     // LEDS output
-    for (CRGB &led : leds){
+    if(calibrated){
+      for (CRGB &led : leds){
       led = CRGB::Black;
     }
+      }
     leds[0] = leds[1] = leds[2] = CRGB::Cyan;
     leds[31] = leds[30] = leds[29] = CRGB::Cyan;
     leds[12] = leds[13] = leds[14] = leds[15] = leds[16] = leds[17] = leds[18] = leds[19] = leds[20] = CRGB::Cyan;
+
+    if (sensors[0] || sensors[1] || sensors[2]){ReportData.Button |= L3_MASK_ON; leds[0] = leds[1] = leds[2] = CRGB::White;}
+    if (sensors[31] || sensors[30] || sensors[29]){ReportData.Button |= R3_MASK_ON; leds[31] = leds[30] = leds[29] = CRGB::White;}
+    if (sensors[12] || sensors[13] || sensors[14] || sensors[15] || sensors[16] || sensors[17] || sensors[18] || sensors[19] || sensors[20])
+      {ReportData.Button |= SELECT_MASK_ON; leds[12] = leds[13] = leds[14] = leds[15] = leds[16] = leds[17] = leds[18] = leds[19] = leds[20] = CRGB::White;}
+
+    
+    
+    
     
   }
   

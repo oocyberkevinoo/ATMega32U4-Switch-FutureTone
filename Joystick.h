@@ -51,6 +51,7 @@
 #include <LUFA/LUFA/Drivers/Board/Buttons.h>
 #include <LUFA/LUFA/Platform/Platform.h>
 
+bool PDM_PC;
 
 // Joystick HID report structure. We have an input and an output.
 typedef struct {
@@ -74,6 +75,29 @@ typedef struct {
 	uint8_t  RX;     // Right Stick X
 	uint8_t  RY;     // Right Stick Y
 } USB_JoystickReport_Output_t;
+
+// SERVICE MODE
+typedef struct {
+  uint16_t SM_REQ;
+  uint8_t  SM_DATA;
+  uint8_t  LX;     // Left  Stick X
+  uint8_t  LY;     // Left  Stick Y
+  uint8_t  RX;     // Right Stick X
+  uint8_t  RY;     // Right Stick Y
+  uint8_t  VendorSpec;
+} USB_ServiceModeReport_Input_t;
+extern USB_ServiceModeReport_Input_t SM_ReportDataIN;
+
+typedef struct {
+  uint16_t SM_REQ;
+  uint8_t  SM_DATA;
+  uint8_t  LX;     // Left  Stick X
+  uint8_t  LY;     // Left  Stick Y
+  uint8_t  RX;     // Right Stick X
+  uint8_t  RY;     // Right Stick Y
+  uint8_t  VendorSpec;
+} USB_ServiceModeReport_Output_t;
+extern USB_ServiceModeReport_Output_t SM_ReportDataOUT;
 
 /* Function Prototypes: */
 #ifdef __cplusplus
