@@ -31,8 +31,6 @@ void EVENT_USB_Device_ConfigurationChanged(void) {
   // We setup the HID report endpoints.
   ConfigSuccess &= Endpoint_ConfigureEndpoint(JOYSTICK_OUT_EPADDR, EP_TYPE_INTERRUPT, JOYSTICK_EPSIZE, 1);
   ConfigSuccess &= Endpoint_ConfigureEndpoint(JOYSTICK_IN_EPADDR, EP_TYPE_INTERRUPT, JOYSTICK_EPSIZE, 1);
-  ConfigSuccess &= Endpoint_ConfigureEndpoint(LIGHT_OUT_EPADDR, EP_TYPE_INTERRUPT, LIGHT_EPSIZE, 1);
-  ConfigSuccess &= Endpoint_ConfigureEndpoint(LIGHT_IN_EPADDR, EP_TYPE_INTERRUPT, LIGHT_EPSIZE, 1);
   // We can read ConfigSuccess to indicate a success or failure at this point.
 }
 
@@ -150,23 +148,8 @@ void HID_Task(void) {
   if (USB_DeviceState != DEVICE_STATE_Configured)
     return;
 
-  //no OUT endpoint for xinput in this firmware
     void* Address = &ReportData;
     uint16_t Size = sizeof(ReportData);
-
-    /* HID Lamps data */
-    // We'll start with the OUT endpoint.
-    Endpoint_SelectEndpoint(LIGHT_OUT_EPADDR);
-    // We'll check to see if we received something on the OUT endpoint.
-    if (Endpoint_IsOUTReceived())
-    {
-      // If we did, and the packet has data, we'll react to it.
-      if (Endpoint_IsReadWriteAllowed())
-      {
-      }
-      // Regardless of whether we reacted to the data, we acknowledge an OUT packet on this endpoint.
-      Endpoint_ClearOUT();
-    }
 
     // We'll start with the OUT endpoint.
     Endpoint_SelectEndpoint(JOYSTICK_OUT_EPADDR);

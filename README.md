@@ -1,45 +1,15 @@
+## DO NOT USE UNTIL THIS MESSAGE IS GONE, THIS FORK IS NOT READY !!!
+
 ## Project Diva Controller (Switch)
-
-(A LOT OF NEW TIPS AND HELP INFORMATIONS HAVE BEEN ADDED, PLEASE CHECK "HELP.TXT"
-
-A "UPDATE LOG.TXT" IS ALSO AVAILABLE)
 
 This repo is a fork from the [fluffymadness/ATMega32U4-Switch-Fightstick repo](https://github.com/fluffymadness/ATMega32U4-Switch-Fightstick)
 made to create a custom Arcade Controller for Hatsune Miku: Project Diva Mega39's/MegaMix that use the Dedicated Arcade Controller mode like the official HORI controller.
 
-You'll need the exact same hardware and libraries as the original repo (+ The [Quick MPR121 library, by SomewhatLurker](https://github.com/somewhatlurker/QuickMpr121) ) , and a Slider using the MPR121 module. (should use 3 of theme for 32 sensors.)
+You'll need the exact same hardware as the original repo, and a Slider using the MPR121 module. (should use 3 of theme for 32 sensors.)
 
 (Hatsune Miku: Project Diva Future Tone (Japanese ver only) is also supported if you can convert the controller Switch to PS4 using adapter or other solutions, even using Remote Play with DS4Emulator on both PS4 and PS5)
 
-Thanks to [Somewhatlurker](https://github.com/somewhatlurker), [Dogtopus](https://github.com/dogtopus/), [TheCorrellRoyHD](https://twitter.com/correllroy), [Zedamex](https://www.youtube.com/channel/UCZ-jUHyriPCuebtpx48MPdQ) for all the needed datas, informations, and help on developping this project.
-
-## Preview of the slider with the 3 different Leds modes available (HORI, HORI+Arcade, Arcade)
-![Gif Loading...](ezgif-1-74ecb11183.gif)
-
-
-## LUFA & QuickMPR121 use
-### LUFA
-Please remember that LUFA change the way Arduino's USB is working.
-To flash code on a Arduino that is running LUFA code, you need to double press "Reset" on your Arduino. (if it don't have button Reset, you have to create your own button, connection RST to GND)
-
-### QuickMPR121
-To use multiple MPR121s, here's this [layout](https://user-images.githubusercontent.com/22883203/132257503-b0a68036-46a7-43d3-a15f-b2952b6a3bcc.png)
-
-
-## TO DO
-- PS4 Support
-
-## NEW NAVIGATION SHORTCUT MODE /!\
-### What it is ?
-It let you hold a button to change how the controller behave, it's useful if you don't have enough buttons on your controller.
-You can even map part of the slider to buttons.
-
-### Why there's a warning ?
-If you update your code from now, your button mapping changed for buttons like HOME button.
-Please check and adapt this new mode to your desire.
-(Check the ControllerNavShortcut.jpg to see where, and how it act by default.)
-
-# (Below is the original ReadMe)
+(Below is the original ReadMe)
 
 ## Switch Fightstick Code (Atmega32U4)
 
@@ -59,25 +29,24 @@ You can switch seamlessly between the 3 modes by pressing START+SELECT.
 - Download Arduino IDE, 
 
 - Download the Bounce2 Library inside the Arduino IDE
-- Add `https://github.com/CrazyRedMachine/Arduino-Lufa/raw/master/package_arduino-lufa_index.json` as an Additional Board Manager URL (in `File -> Preferences` menu)
-(check the repo readme for screencaps if you need more details)
-- Install LUFA AVR Boards from the Board Manager
-- Select Arduino Leonardo (LUFA) as your board type
-- Build and Flash
+- Download Arduino Lufa from https://github.com/Palatis/Arduino-Lufa and follow the instructions on it's repository
+- Build and Flash for your ATMEGA32U4 Board
 - Have Fun
 
-## Pinmapping (UPDATED FOR THIS FORK !)
+## Pinmapping
 
 Here is the Pinnumbers to Button Mapping for Connecting the actual physical cables to a Pro Micro.
-	
+	joystickUP.attach(0,INPUT_PULLUP);
 
-	joystickLEFT.attach(1,INPUT_PULLUP);
+	joystickDOWN.attach(1,INPUT_PULLUP);
 
-	joystickRIGHT.attach(0,INPUT_PULLUP);
+	joystickLEFT.attach(2,INPUT_PULLUP);
 
-	buttonA.attach(4,INPUT_PULLUP);
+	joystickRIGHT.attach(3,INPUT_PULLUP);
 
-	buttonB.attach(5,INPUT_PULLUP);
+	buttonA.attach(5,INPUT_PULLUP);
+
+	buttonB.attach(4,INPUT_PULLUP);
 
 	buttonX.attach(7,INPUT_PULLUP);
 
@@ -87,18 +56,15 @@ Here is the Pinnumbers to Button Mapping for Connecting the actual physical cabl
 
 	buttonRB.attach(8,INPUT_PULLUP);
 
-	buttonLT.attach(16,INPUT_PULLUP);
+	buttonLT.attach(14,INPUT_PULLUP);
 
 	buttonRT.attach(10,INPUT_PULLUP);
 
 	buttonSTART.attach(15,INPUT_PULLUP);
 
-	buttonSELECT.attach(14,INPUT_PULLUP);
+	buttonSELECT.attach(16,INPUT_PULLUP);
 
-	//buttonHOME.attach(18,INPUT_PULLUP);
-	navModePin.attach(18,INPUT_PULLUP);
-	
-	switchModePin.attach(19,INPUT_PULLUP);
+	buttonHOME.attach(18,INPUT_PULLUP);
 
 ### Credits
 

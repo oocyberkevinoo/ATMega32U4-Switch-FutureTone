@@ -63,114 +63,6 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM LEDReport[] =
   HID_RI_USAGE(8, 0x00), /* Undefined */
   HID_RI_COLLECTION(8, 0x01), /* Application */
 
-  /* Joystick RGB */
-
-  /*Lights */
-  0x85, 0x02,                    /*   REPORT_ID 5*/
-  0x15, 0x00,                    /*     LOGICAL_MINIMUM (0) */
-  0x26, 0xFF, 0x00,              /*     LOGICAL_MAXIMUM (255) */
-  /* Joy Red */
-  0x05, 0x0a,                    /*     USAGE_PAGE (Ordinals) */
-  0x09, 0x01,                    /*     USAGE (Instance 1) */
-  0xa1, 0x02,                    /*     COLLECTION (Logical) */
-  0x05, 0x08,                    /*       USAGE_PAGE (LEDs) */
-  0x09, 0x4b,                    /*       USAGE (Generic Indicator 1) */
-  0x79, 0x04,                    /*       STRING INDEX (4) */
-  0x75, 0x08,                    /*       REPORT_SIZE (8) */
-  0x95, 0x01,                    /*       REPORT_COUNT (1) */
-  0x91, 0x02,                    /*       OUTPUT (Data,Var,Abs) */
-  0xc0,                          /*     END_COLLECTION */
-  /* Joy Green */
-  0x05, 0x0a,                    /*     USAGE_PAGE (Ordinals) */
-  0x09, 0x02,                    /*     USAGE (Instance 2) */
-  0xa1, 0x02,                    /*     COLLECTION (Logical) */
-  0x05, 0x08,                    /*       USAGE_PAGE (LEDs) */
-  0x09, 0x4b,                    /*       USAGE (Generic Indicator 1) */
-  0x79, 0x05,                    /*       STRING INDEX (5) */
-  0x75, 0x08,                    /*       REPORT_SIZE (8) */
-  0x95, 0x01,                    /*       REPORT_COUNT (1) */
-  0x91, 0x02,                    /*       OUTPUT (Data,Var,Abs) */
-  0xc0,                          /*     END_COLLECTION */
-  /* Joy Blue */
-  0x05, 0x0a,                    /*     USAGE_PAGE (Ordinals) */
-  0x09, 0x03,                    /*     USAGE (Instance 3) */
-  0xa1, 0x02,                    /*     COLLECTION (Logical) */
-  0x05, 0x08,                    /*       USAGE_PAGE (LEDs) */
-  0x09, 0x4b,                    /*       USAGE (Generic Indicator 1) */
-  0x79, 0x06,                    /*       STRING INDEX (6) */
-  0x75, 0x08,                    /*       REPORT_SIZE (8) */
-  0x95, 0x01,                    /*       REPORT_COUNT (1) */
-  0x91, 0x02,                    /*       OUTPUT (Data,Var,Abs) */
-  0xc0,                          /*     END_COLLECTION */
-  /* RFID Red */
-  0x05, 0x0a,                    /*     USAGE_PAGE (Ordinals) */
-  0x09, 0x04,                    /*     USAGE (Instance 4) */
-  0xa1, 0x02,                    /*     COLLECTION (Logical) */
-  0x05, 0x08,                    /*       USAGE_PAGE (LEDs) */
-  0x09, 0x4b,                    /*       USAGE (Generic Indicator 1) */
-  0x79, 0x07,                    /*       STRING INDEX (7) */
-  0x75, 0x08,                    /*       REPORT_SIZE (8) */
-  0x95, 0x01,                    /*       REPORT_COUNT (1) */
-  0x91, 0x02,                    /*       OUTPUT (Data,Var,Abs) */
-  0xc0,                          /*     END_COLLECTION */
-  /* RFID Green */
-  0x05, 0x0a,                    /*     USAGE_PAGE (Ordinals) */
-  0x09, 0x05,                    /*     USAGE (Instance 5) */
-  0xa1, 0x02,                    /*     COLLECTION (Logical) */
-  0x05, 0x08,                    /*       USAGE_PAGE (LEDs) */
-  0x09, 0x4b,                    /*       USAGE (Generic Indicator 1) */
-  0x79, 0x08,                    /*       STRING INDEX (8) */
-  0x75, 0x08,                    /*       REPORT_SIZE (8) */
-  0x95, 0x01,                    /*       REPORT_COUNT (1) */
-  0x91, 0x02,                    /*       OUTPUT (Data,Var,Abs) */
-  0xc0,                          /*     END_COLLECTION */
-  /* RFID Blue */
-  0x05, 0x0a,                    /*     USAGE_PAGE (Ordinals) */
-  0x09, 0x06,                    /*     USAGE (Instance 6) */
-  0xa1, 0x02,                    /*     COLLECTION (Logical) */
-  0x05, 0x08,                    /*       USAGE_PAGE (LEDs) */
-  0x09, 0x4b,                    /*       USAGE (Generic Indicator 1) */
-  0x79, 0x09,                    /*       STRING INDEX (9) */
-  0x75, 0x08,                    /*       REPORT_SIZE (8) */
-  0x95, 0x01,                    /*       REPORT_COUNT (1) */
-  0x91, 0x02,                    /*       OUTPUT (Data,Var,Abs) */
-  0xc0,                          /*     END_COLLECTION */
-  /* Left button Led */
-  0x05, 0x0a,                    /*     USAGE_PAGE (Ordinals) */
-  0x09, 0x07,                    /*     USAGE (Instance 7) */
-  0xa1, 0x02,                    /*     COLLECTION (Logical) */
-  0x05, 0x08,                    /*       USAGE_PAGE (LEDs) */
-  0x09, 0x4b,                    /*       USAGE (Generic Indicator 1) */
-  0x79, 0x0a,                    /*       STRING INDEX (10) */
-  0x75, 0x08,                    /*       REPORT_SIZE (8) */
-  0x95, 0x01,                    /*       REPORT_COUNT (1) */
-  0x91, 0x02,                    /*       OUTPUT (Data,Var,Abs) */
-  0xc0,                          /*     END_COLLECTION */
-  /* Right button Led */
-  0x05, 0x0a,                    /*     USAGE_PAGE (Ordinals) */
-  0x09, 0x08,                    /*     USAGE (Instance 8) */
-  0xa1, 0x02,                    /*     COLLECTION (Logical) */
-  0x05, 0x08,                    /*       USAGE_PAGE (LEDs) */
-  0x09, 0x4b,                    /*       USAGE (Generic Indicator 1) */
-  0x79, 0x0b,                    /*       STRING INDEX (11) */
-  0x75, 0x08,                    /*       REPORT_SIZE (1) */
-  0x95, 0x01,                    /*       REPORT_COUNT (8) */
-  0x91, 0x02,                    /*       OUTPUT (Data,Var,Abs) */
-  0xc0,                          /*     END_COLLECTION */
-
-  // Globals
-  HID_RI_REPORT_ID(8, 3),
-  HID_RI_REPORT_COUNT(8, 1),
-  HID_RI_REPORT_SIZE(8, 8),
-  HID_RI_LOGICAL_MINIMUM(16, 0),
-  HID_RI_LOGICAL_MAXIMUM(16, 255),
-  HID_RI_USAGE_PAGE(8, 0x09), // Ordinals
-  HID_RI_USAGE(8, 0x00), /* Undefined */
-  // Locals
-  HID_RI_USAGE_MINIMUM(8, 1), // LED 1
-  HID_RI_USAGE_MAXIMUM(8, 1), // LED 8 + buttons
-  HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE | HID_IOF_NON_VOLATILE),
-
   // Feature Report for software manager.
   HID_RI_REPORT_ID(8, 4),               
   HID_RI_USAGE(8, 0x00), /* Undefined */        
@@ -277,7 +169,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
     .InterfaceNumber        = INTERFACE_ID_Light,
     .AlternateSetting       = 0x00,
 
-    .TotalEndpoints         = 2,
+    .TotalEndpoints         = 0,
 
     .Class                  = HID_CSCP_HIDClass,
     .SubClass               = HID_CSCP_NonBootSubclass,
@@ -295,26 +187,6 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
     .TotalReportDescriptors = 1,
     .HIDReportType          = HID_DTYPE_Report,
     .HIDReportLength        = sizeof(LEDReport)
-  },
-
-  .HID_LightReportINEndpoint =
-  {
-    .Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
-
-    .EndpointAddress        = LIGHT_IN_EPADDR,
-    .Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
-    .EndpointSize           = LIGHT_EPSIZE,
-    .PollingIntervalMS      = 0x04
-  },
-
-  .HID_LightReportOUTEndpoint =
-  {
-    .Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
-
-    .EndpointAddress        = LIGHT_OUT_EPADDR,
-    .Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
-    .EndpointSize           = LIGHT_EPSIZE,
-    .PollingIntervalMS      = 0x10
   },
 };
 

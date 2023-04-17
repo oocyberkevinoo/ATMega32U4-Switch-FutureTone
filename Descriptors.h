@@ -20,8 +20,6 @@ typedef struct
   // Light
   USB_Descriptor_Interface_t            HID_LightInterface;
   USB_HID_Descriptor_HID_t              HID_LightHID;
-  USB_Descriptor_Endpoint_t             HID_LightReportOUTEndpoint;
-  USB_Descriptor_Endpoint_t             HID_LightReportINEndpoint;
 } USB_Descriptor_Configuration_t;
 
 // Device Interface Descriptor IDs
@@ -41,10 +39,8 @@ enum StringDescriptors_t
 
 // Macros
 // Endpoint Addresses
-#define JOYSTICK_IN_EPADDR  (ENDPOINT_DIR_IN  | 3)
-#define JOYSTICK_OUT_EPADDR (ENDPOINT_DIR_OUT | 4)
-#define LIGHT_IN_EPADDR  (ENDPOINT_DIR_IN  | 1)
-#define LIGHT_OUT_EPADDR (ENDPOINT_DIR_OUT | 2)
+#define JOYSTICK_IN_EPADDR  (ENDPOINT_DIR_IN  | 1)
+#define JOYSTICK_OUT_EPADDR (ENDPOINT_DIR_OUT | 2)
 #define LIGHT_EPSIZE           64
 // HID Endpoint Size
 // The Switch -needs- this to be 64.
