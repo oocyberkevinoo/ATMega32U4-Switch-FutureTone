@@ -5,6 +5,7 @@
 #include "Joystick.h"
 #include <Bounce2.h>
 #include <EEPROM.h>
+#include "Settings.h"
 
 #define BOUNCE_WITH_PROMPT_DETECTION
 #define MILLIDEBOUNCE 1 //Debounce time in milliseconds
@@ -555,8 +556,9 @@ switch(EEPROM.read(7)){
   default:
   return false;
 }
-      
-    }
+}
+
+
 
 /*
  * SLIDER ENGINE
@@ -1566,3 +1568,31 @@ void resetButtons(){
   buttonStatus[BUTTONLEFT] = false;
   buttonStatus[BUTTONRIGHT] = false;
 }
+
+extern "C"{
+  byte ReadEEPROM(int i){ 
+    return EEPROM.read(i);
+    }
+
+  void WriteEEPROM(int i, byte value){
+    EEPROM.write(i, value);
+  }
+
+  void PDAC_PC_RELOAD(){ // Reload settings
+    settingsLoader();
+    FastLED.setBrightness(LEDBrightnessLoad());
+  }
+
+  void PDAC_PC_CALIBRATE(){ // Calibrate slider with new settings
+    calibrateSensors();
+      processButtons();
+  }
+
+  void PDAC_PC_SERVICE(){ // Put the controller in service mode
+    PDM_PC = true;
+  }
+    
+  }
+  
+    
+ 

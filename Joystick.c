@@ -1,3 +1,5 @@
+extern void PDAC_PC_Used_Update();
+
 #include "Joystick.h"
 USB_JoystickReport_Input_t ReportData;
 USB_ServiceModeReport_Input_t SM_ReportDataIN;
@@ -36,12 +38,19 @@ void EVENT_USB_Device_ConfigurationChanged(void) {
 
 // Process control requests sent to the device from the USB host.
 void EVENT_USB_Device_ControlRequest(void) {
+<<<<<<< Updated upstream
      static uint8_t value = 0;
+=======
+     static byte command = 0x00;
+     static byte value1 = 0x00;
+     static byte value2 = 0x00;
+>>>>>>> Stashed changes
 /* get feature */
 if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
 {
   if (USB_ControlRequest.bRequest == HID_REQ_GetReport)
   {
+<<<<<<< Updated upstream
       uint8_t feature_data[2] = {USB_ControlRequest.wValue & 0xFF};
       uint8_t feature_data_size;
       switch (USB_ControlRequest.wValue & 0xFF) /* contains report id */
@@ -50,6 +59,54 @@ if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | R
           feature_data_size = 2;
           feature_data[1] = value;
           PDM_PC = true;
+=======
+      uint8_t feature_data[3] = {USB_ControlRequest.wValue & 0xFF};
+      uint8_t feature_data_size = 4;
+
+      feature_data[1] = 0;
+      feature_data[2] = 0;
+      feature_data[3] = 0;
+      
+      switch (USB_ControlRequest.wValue & 0xFF) /* contains report id */
+      {
+        case 4: // Get if the controller already used the Manager
+
+          switch(command){
+            case PDM_PC_Used:  // Checking if it's a first time using manager
+            feature_data[1] = PDM_PC_Used;
+            feature_data[2] = ReadEEPROM(8);
+            break;
+            
+            case PDM_PC_GetConfig:  // Get one configuration
+            feature_data[1] = command;
+            feature_data[2] = ReadEEPROM(value1);
+            feature_data[3] = value1;
+            break;
+            
+            case PDM_PC_SetConfig:  // Set one configuration
+            feature_data[1] = command;
+            feature_data[3] = ReadEEPROM(value1);
+            WriteEEPROM(value1, value2);
+            feature_data[2] = ReadEEPROM(value1);
+            break;
+            
+            case PDM_PC_Reload: // Reload configurations
+            PDAC_PC_RELOAD();
+            break;
+
+            case PDM_PC_Calibrate:  // Recalibrate the slider
+            PDAC_PC_CALIBRATE();
+            break;
+            
+            default:
+            break;
+          }
+        
+
+          
+          
+          //PDAC_PC_Used_Update();
+>>>>>>> Stashed changes
           break;
         default:
           break;
@@ -80,8 +137,15 @@ else if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLAS
       switch (USB_ControlRequest.wValue & 0xFF) /* contains report id */
       {
         case 4:
+<<<<<<< Updated upstream
           Endpoint_Read_Control_Stream_LE(recv_data, 2);
           value = recv_data[1];
+=======
+          Endpoint_Read_Control_Stream_LE(recv_data, 4);
+          command = recv_data[1];
+          value1 = recv_data[2];
+          value2 = recv_data[3];
+>>>>>>> Stashed changes
           break;
         default:
           break;
@@ -98,9 +162,13 @@ else if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLAS
   
   /*
   // We can handle two control requests: a GetReport and a SetReport.
+<<<<<<< Updated upstream
 
   switch (USB_ControlRequest.bRequest) {
 
+=======
+  switch (USB_ControlRequest.bRequest) {
+>>>>>>> Stashed changes
     case HID_REQ_SetReport:
     if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE)){
       uint16_t ReportSize = USB_ControlRequest.wLength;
@@ -122,6 +190,7 @@ else if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLAS
         uint8_t  ReportType = (USB_ControlRequest.wValue >> 8) - 1;
         uint8_t ReportData = 0x15;
         //uint8_t  ReportData[HIDInterfaceInfo->Config.PrevReportINBufferSize];
+<<<<<<< Updated upstream
 
         Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
 
@@ -130,6 +199,12 @@ else if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLAS
         if (ReportID)
           Endpoint_Write_8(120);
 
+=======
+        Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
+        Endpoint_ClearSETUP();
+        if (ReportID)
+          Endpoint_Write_8(120);
+>>>>>>> Stashed changes
         Endpoint_Write_Control_Stream_LE(ReportData, ReportSize);
         Endpoint_ClearOUT();
         //PDM_PC = true;
@@ -213,8 +288,13 @@ void HID_Task_old(void) {
       // However, since we're not doing anything with this data, we abandon it.
 
       // Key data to pass into SERVICE MODE
+<<<<<<< Updated upstream
       if(JoystickOutputData.LX == 0x39 && JoystickOutputData.RX == 0x39 && JoystickOutputData.HAT == 0x39 && !PDM_PC)
         PDM_PC = true;
+=======
+      //if(JoystickOutputData.LX == 0x39 && JoystickOutputData.RX == 0x39 && JoystickOutputData.HAT == 0x39 && !PDM_PC)
+        //PDM_PC = true;
+>>>>>>> Stashed changes
     }
       
     }

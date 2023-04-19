@@ -69,7 +69,11 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM LEDReport[] =
   HID_RI_LOGICAL_MINIMUM(8, 0x00),            
   HID_RI_LOGICAL_MAXIMUM(8, 0xFF),    
   HID_RI_REPORT_SIZE(8, 0x08),                
+<<<<<<< Updated upstream
   HID_RI_REPORT_COUNT(8, 1),                
+=======
+  HID_RI_REPORT_COUNT(8, 3),                
+>>>>>>> Stashed changes
   HID_RI_FEATURE(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
   
   HID_RI_END_COLLECTION(0),

@@ -22,3 +22,5 @@ main_24sensors/Joystick.h
 main_24sensors/LUFA.c
 main_24sensors/LUFAConfig.h
 main_24sensors/main_24sensors.ino
+main/Settings.h
+main/Settings.c
