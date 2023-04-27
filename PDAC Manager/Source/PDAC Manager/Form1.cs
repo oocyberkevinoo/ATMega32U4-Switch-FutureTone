@@ -30,7 +30,10 @@ namespace PDAC_Manager
         }
         public void SetConnectState(bool connected)
         {
-            btn_connect.Enabled = !connected;
+            if(connected)
+                btn_connect.Text = "Disconnect the controller";
+            else
+                btn_connect.Text = "Connect to controller";
             btn_upload.Enabled = connected;
             
             btn_settingsLoadFile.Enabled = connected;
@@ -58,8 +61,15 @@ namespace PDAC_Manager
 
         private void btn_connect_Click(object sender, EventArgs e)
         {
-            //SetConnectState(true);
-            ControllerManager.ConnectController();
+            if (btn_connect.Text.Contains("Disconnect"))
+            {
+                ControllerManager.DisconnectController();
+            }
+            else
+            {
+                ControllerManager.ConnectController();
+            }
+            
         
         }
 

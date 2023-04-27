@@ -29,14 +29,17 @@ namespace PDAC_Manager
         }
         static public class PDAC_Configs
         {
-            public const byte LedsBrightness =  0x00;
-            public const byte Sensitivity =     0x01;
-            public const byte MprFilter =       0x02;
-            public const byte CustomFilter =    0x03;
-            public const byte Release =         0x04;
-            public const byte LedsMode =        0x05;
-            public const byte Calibration =     0x06;
-            public const byte Navigation =      0x07;
+            public const byte LedsBrightness =  0;
+            public const byte Sensitivity =     1;
+            public const byte MprFilter =       2;
+            public const byte CustomFilter =    3;
+            public const byte Release =         4;
+            public const byte LedsMode =        5;
+            public const byte Calibration =     6;
+            public const byte Navigation =      7;
+            public const byte HalfLeds =        8;
+
+            public const byte UsedAddr = 20;
 
         }
 
@@ -53,16 +56,7 @@ namespace PDAC_Manager
         static byte[] MprFilter = new byte[]        { 0x02, 0x00, 0x01 };
         static byte[] CustomFilter = new byte[]     { 0x02, 0x01, 0x00 };
         static byte[] LedsMode = new byte[]         { 0x00, 0x01, 0x02 };
-
-        struct USB_JoystickReport_Output_t
-        {
-            public UInt16 Button; // 16 buttons; see JoystickButtons_t for bit mapping
-            public byte HAT;    // HAT switch; one nibble w/ unused nibble
-            public byte LX;     // Left  Stick X
-            public byte LY;     // Left  Stick Y
-            public byte RX;     // Right Stick X
-            public byte RY;     // Right Stick Y
-        }
+        static byte[] HalfLedsMode = new byte[]     { 0x00, 0x01 };
 
         static int version = 512;
         static Form1 form1;
@@ -99,6 +93,7 @@ namespace PDAC_Manager
                         {
                             form1.UpdateLog("WARNING: this controller never been used with a manager before.\r\n" +
                                 "We recommend you to save your config in a file before doing any modification.");
+                            AskController(PDAC_Commands.SetSetting, PDAC_Configs.UsedAddr, PDAC_Used.AlreadyUsed);
                         }
 
                         LoadConfigFromController();
@@ -109,6 +104,9 @@ namespace PDAC_Manager
 
 
                     }
+                    d.CloseDevice();
+                    d.Dispose();
+                    
 
 
                 }
@@ -175,6 +173,11 @@ namespace PDAC_Manager
                 form1.comboBox_navMode.SelectedIndex =
                     Array.IndexOf<byte>(Navigation, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.Navigation + offset)));
 
+                if (Array.IndexOf<byte>(HalfLedsMode, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.HalfLeds + offset))) == 0x01)
+                    form1.checkBox_halfLeds.Checked = true;
+                else
+                    form1.checkBox_halfLeds.Checked = false;
+
                 form1.Update();
             }
             catch (Exception)
@@ -194,6 +197,15 @@ namespace PDAC_Manager
             error = true;
         }
 
+        static public void DisconnectController()
+        {
+            
+            controller.CloseDevice();
+            controller.Dispose();
+            form1.SetConnectState(false);
+            form1.UpdateLog("Disconnected");
+        }
+
         static public void SaveConfigToController()
         {
             try
@@ -206,6 +218,10 @@ namespace PDAC_Manager
                 AskController(PDAC_Commands.SetSetting, PDAC_Configs.CustomFilter, CustomFilter[form1.comboBox_customFilter.SelectedIndex]);
                 AskController(PDAC_Commands.SetSetting, PDAC_Configs.Navigation, Navigation[form1.comboBox_navMode.SelectedIndex]);
                 AskController(PDAC_Commands.SetSetting, PDAC_Configs.LedsMode, LedsMode[form1.comboBox_ledsMode.SelectedIndex]);
+                byte halfLedsByte = HalfLedsMode[0];
+                if (form1.checkBox_halfLeds.Checked)
+                    halfLedsByte = HalfLedsMode[1];
+                AskController(PDAC_Commands.SetSetting, PDAC_Configs.HalfLeds, halfLedsByte);
 
                 AskController(PDAC_Commands.Reload);
                 form1.UpdateLog("Configuration uploaded.");
@@ -271,8 +287,9 @@ namespace PDAC_Manager
                     inifile.Write("LedsMode", form1.comboBox_ledsMode.SelectedIndex.ToString());
                     inifile.Write("Calibration", form1.trackBar_calibration.Value.ToString());
                     inifile.Write("Navigation", form1.comboBox_navMode.SelectedIndex.ToString());
+                    inifile.Write("HalfLedsMode", form1.checkBox_halfLeds.Checked.ToString());
 
-                    
+
 
                 }
             }
@@ -297,6 +314,7 @@ namespace PDAC_Manager
                     form1.comboBox_ledsMode.SelectedIndex = int.Parse(inifile.Read("LedsMode"));
                     form1.trackBar_calibration.Value = int.Parse(inifile.Read("Calibration"));
                     form1.comboBox_navMode.SelectedIndex = int.Parse(inifile.Read("Navigation"));
+                    form1.checkBox_halfLeds.Checked = bool.Parse(inifile.Read("HalfLedsMode"));
 
 
                 }

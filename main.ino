@@ -5,7 +5,7 @@
 #include "Joystick.h"
 #include <Bounce2.h>
 #include <EEPROM.h>
-#include "Settings.h"
+//#include "Settings.h"
 
 #define BOUNCE_WITH_PROMPT_DETECTION
 #define MILLIDEBOUNCE 1 //Debounce time in milliseconds
@@ -141,9 +141,17 @@ byte gameplayLightUp = 0x00;
 
 
 // Slider LightUp Effect
+bool halfLedsMode = false;
+
 int lightUpTimer = 0;
 int lightUpMax = 25*5;
 int lightUpCurrent = 0;
+
+bool lightUpBreathDirection = false;
+int lightUpBreathTimer = 0;
+float lightUpBreath = 1;
+
+double lightUpTouchedTrail[32];
 
 int lightWave = 0;
 
@@ -292,6 +300,7 @@ void settingsLoader(){ // Load settings from EEPROM that need fast load
   sliderFilter1 = EEPROM.read(2);
   sliderFilter2 = EEPROM.read(3);
   gameplayLightUp = EEPROM.read(5);
+  halfLedsMode = EEPROM.read(8);
   }
   
 
@@ -493,7 +502,7 @@ int SensitivityLoad(){  // Sensitivity of sensors
     return 4;
     break;
     default:
-    return 11;
+    return 8;
     }
   }
 
@@ -557,6 +566,16 @@ switch(EEPROM.read(7)){
   return false;
 }
 }
+
+  bool HalfLedsMode(){
+    switch(EEPROM.read(8)){
+      case 0x01:
+      return true;
+      break;
+      default:
+      return false;
+    }
+  }
 
 
 
@@ -785,7 +804,7 @@ void sliderGameplay(){
     fill_rainbow(leds, NUM_LEDS_PER_STRIP, thisHue, -15); 
       
 
-  }else if(resultBits == noTouchBits && gameplayLightUp == 0x01){   // White pannel when not touching, with transition and buffer to make it smooth
+  }/*else if(resultBits == noTouchBits && gameplayLightUp == 0x01){   // ARCADE
     // Adjust timer and RGB values for LEDs
     if(lightUpTimer > 0) lightUpTimer--;
     if(lightUpCurrent < lightUpMax) lightUpCurrent++;
@@ -807,12 +826,13 @@ void sliderGameplay(){
             }
         }
    
-    }else if(gameplayLightUp == 0x02){
+    }*/else if(gameplayLightUp >= 0x01){ // ARCADE
       
     // Adjust timer and RGB values for LEDs
     if(resultBits == noTouchBits){
       if(lightUpTimer > 0) lightUpTimer--;
       if(lightUpCurrent < lightUpMax) lightUpCurrent++; 
+
     }
     else{
       if(lightUpTimer < 25) lightUpTimer = lightUpTimer+2;
@@ -821,70 +841,102 @@ void sliderGameplay(){
       if(lightUpTimer > 25) lightUpTimer = 25;
       if(lightUpCurrent < 0) lightUpCurrent = 0;
     }
+  
+    // Breath effect
+    if(gameplayLightUp == 0x02){ // Only for FULL ARCADE
+      int breathStrength = 1400;
+      int breathSpeed = 2;
+      
+      if(lightUpBreathDirection){
+      if(lightUpBreath < breathStrength)
+        lightUpBreath+= breathSpeed;
+      else
+        lightUpBreathDirection = false;
+     }else{
+      if(lightUpBreath > 0)
+        lightUpBreath-= breathSpeed;
+      else
+        lightUpBreathDirection = true;
+     }
+
+     if(lightUpCurrent <= 0){
+      lightUpBreathDirection = false;
+      lightUpBreath = 0;
+     }
+    }else if(lightUpBreath != 0) lightUpBreath = 0; // Reset if not needed
+     
+
+    
     
        bool lightUp = true;
        bool first = true;
-        for (CRGB &led : leds){
-          if(lightUp){
-            if(!first)
-              led = CRGB(lightUpCurrent/5, lightUpCurrent/5, lightUpCurrent/5);
-            else
-              led = CRGB::Black; // Except for the first one
 
+        for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
+          int newLight = lightUpCurrent / 5 - lightUpBreath / 100;
+          if(newLight < 0) newLight = 0;
+          if(halfLedsMode){
+            if(lightUp){
+            if(!first){
+              
+              leds[i] = CRGB(newLight, newLight, newLight);   
+            }
+              
+            else
+              leds[i] = CRGB::Black; // Except for the first one
+            
+            
             if(first) first = false;
             lightUp = false;
             }
           else{
-            led = CRGB::Black;
+            leds[i] = CRGB::Black;
             lightUp = true;
             }
-        }
-        
-        for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){  // Lightup the touched sensor
-          if(sensors[i]) leds[i] = CRGB::White;
-      
-     
-          
+          }else
+            leds[i] = CRGB(newLight, newLight, newLight); 
+            
+            
+            
+          if(sensors[i]){ // Lightup the touched sensor
+            leds[i] = CRGB::White;
+            lightUpTouchedTrail[i] = 75;  // Max Brightness to start with for trail effect
+          } 
+          else if(lightUpTouchedTrail[i] > 0 && gameplayLightUp == 0x02){  // Only for FULL ARCADE - Trail effect: Transition light when not touched anymore
+            lightUpTouchedTrail[i] -= 1;  // Transition speed
+            if(lightUpTouchedTrail[i] < 0) lightUpTouchedTrail[i] = 0;
+            
+            // Turquoise transition start...
+            int R = (lightUpTouchedTrail[i] - 65);
+            int G = (lightUpTouchedTrail[i] - 49);
+            int B = (lightUpTouchedTrail[i] - 51);
+            if(R < 0) R = 0;
+            if(G < 0) G = 0;
+            if(B < 0) B = 0;
+
+            // output result
+            leds[i] = leds[i] + CRGB(R,G,B);
           }
+
+        }
 
       
     }
-    else{
-      if(gameplayLightUp == 0x02){ // Arcade Lights Mode
-        // Adjust timer and RGB values for LEDs
-    if(lightUpTimer < 25) lightUpTimer++;
-    if(lightUpCurrent > 0) lightUpCurrent--;
-       bool lightUp = true;
-       bool first = true;
-        for (CRGB &led : leds){
-          if(lightUp && lightUpTimer >= 25){
-            if(!first)
-              led = CRGB(lightUpCurrent/5, lightUpCurrent/5, lightUpCurrent/5);
-            else
-              led = CRGB::Black; // Except for the first one
+    else{ // HORI
 
-            if(first) first = false;
-            lightUp = false;
-            }
-          else{
-            led = CRGB::Black;
-            lightUp = true;
-            }
-        }
-      }
-      else{
         for (CRGB &led : leds){
         led = CRGB::Black;
         }
-      }
+
     
     for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){  // Lightup the touched sensor
       if(sensors[i]){
         leds[i] = CRGB::White;
-        
+
         if(lightUpCurrent != 0 && gameplayLightUp == 0x01) lightUpCurrent = 0;
         if(lightUpTimer != 25 && gameplayLightUp == 0x01) lightUpTimer = 25;
+
         }
+        
       }
     }
   }
@@ -1105,6 +1157,14 @@ void sliderNavigation(){
     else {buttonStatus[BUTTONLEFT] = false;}
     if (sensors[21] || sensors[22] || sensors[23]) {buttonStatus[BUTTONRIGHT] = true;}
     else {buttonStatus[BUTTONRIGHT] = false;}
+    /*if (sensors[7] || sensors[8] || sensors[9]) {buttonStatus[BUTTONX] = true;}
+    else {buttonStatus[BUTTONX] = false;}
+    if (sensors[11] || sensors[12] || sensors[13]) {buttonStatus[BUTTONY] = true;}
+    else {buttonStatus[BUTTONY] = false;}
+    if (sensors[17] || sensors[18] || sensors[19]) {buttonStatus[BUTTONB] = true;}
+    else {buttonStatus[BUTTONB] = false;}
+    if (sensors[21] || sensors[22] || sensors[23]) {buttonStatus[BUTTONA] = true;}
+    else {buttonStatus[BUTTONA] = false;}*/
   
     // Apply LEDS colors...
     if(buttonStatus[BUTTONLB]) colorL1Btn = colorPushed;
@@ -1575,7 +1635,8 @@ extern "C"{
     }
 
   void WriteEEPROM(int i, byte value){
-    EEPROM.write(i, value);
+    if(EEPROM.read(i) != value)
+      EEPROM.write(i, value);
   }
 
   void PDAC_PC_RELOAD(){ // Reload settings

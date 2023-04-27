@@ -55,6 +55,7 @@
             this.btn_reload = new System.Windows.Forms.Button();
             this.btn_saveBackup = new System.Windows.Forms.Button();
             this.btn_calibrate = new System.Windows.Forms.Button();
+            this.checkBox_halfLeds = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_LEDsBrightness)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_sensitivityTouch)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_sensitivityRelease)).BeginInit();
@@ -69,7 +70,8 @@
             this.btn_connect.TabIndex = 0;
             this.btn_connect.Text = "Connect to controller";
             this.toolTip1.SetToolTip(this.btn_connect, "Connect to your controller.\r\nPlease make sure it is plugged in your computer BEFO" +
-        "RE pressing this button.");
+        "RE pressing this button.\r\n\r\nIf connected, let you disconnect your controller pro" +
+        "perly too.");
             this.btn_connect.UseVisualStyleBackColor = true;
             this.btn_connect.Click += new System.EventHandler(this.btn_connect_Click);
             // 
@@ -106,7 +108,7 @@
             // btn_upload
             // 
             this.btn_upload.Enabled = false;
-            this.btn_upload.Location = new System.Drawing.Point(534, 48);
+            this.btn_upload.Location = new System.Drawing.Point(534, 60);
             this.btn_upload.Name = "btn_upload";
             this.btn_upload.Size = new System.Drawing.Size(170, 38);
             this.btn_upload.TabIndex = 0;
@@ -252,8 +254,8 @@
             this.comboBox_ledsMode.FormattingEnabled = true;
             this.comboBox_ledsMode.Items.AddRange(new object[] {
             "HORI",
-            "HORI + ARCADE",
-            "ARCADE"});
+            "ARCADE",
+            "FULL ARCADE"});
             this.comboBox_ledsMode.Location = new System.Drawing.Point(106, 251);
             this.comboBox_ledsMode.Name = "comboBox_ledsMode";
             this.comboBox_ledsMode.Size = new System.Drawing.Size(139, 21);
@@ -340,11 +342,24 @@
             this.btn_calibrate.UseVisualStyleBackColor = true;
             this.btn_calibrate.Click += new System.EventHandler(this.btn_calibrate_Click);
             // 
+            // checkBox_halfLeds
+            // 
+            this.checkBox_halfLeds.AutoSize = true;
+            this.checkBox_halfLeds.Location = new System.Drawing.Point(251, 253);
+            this.checkBox_halfLeds.Name = "checkBox_halfLeds";
+            this.checkBox_halfLeds.Size = new System.Drawing.Size(101, 17);
+            this.checkBox_halfLeds.TabIndex = 5;
+            this.checkBox_halfLeds.Text = "Half Leds Mode";
+            this.toolTip1.SetToolTip(this.checkBox_halfLeds, "If you have trouble to power all the 32 LEDs at the same time when not touching t" +
+        "he slider,\r\nyou can activate this option to power on only half of them.");
+            this.checkBox_halfLeds.UseVisualStyleBackColor = true;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(712, 318);
+            this.Controls.Add(this.checkBox_halfLeds);
             this.Controls.Add(this.comboBox_customFilter);
             this.Controls.Add(this.comboBox_navMode);
             this.Controls.Add(this.comboBox_ledsMode);
@@ -407,6 +422,7 @@
         public System.Windows.Forms.Button btn_reload;
         public System.Windows.Forms.Button btn_saveBackup;
         public System.Windows.Forms.Button btn_calibrate;
+        public System.Windows.Forms.CheckBox checkBox_halfLeds;
     }
 }
 

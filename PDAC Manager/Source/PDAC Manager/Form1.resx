@@ -120,6 +120,9 @@
   <metadata name="toolTip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>17, 17</value>
   </metadata>
+  <metadata name="toolTip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>17, 17</value>
+  </metadata>
   <data name="trackBar_sensitivityRelease.ToolTip" xml:space="preserve">
     <value>How sensitive is your Slider to your finger RELEASING it.
 Higher the value is, easier it will stop triggering.
@@ -166,11 +169,11 @@ LEDs are ON and fade in and out when touching the slider, like the Arcade cab. (
 HORI: 
 LEDs are OFF and light up only on touch, like the HORI Arcade Controller.
 
-HORI + Arcade: 
-LEDs are ON but switch OFF immediately on touching, lighting up the touched ones.
+ARCADE: 
+LEDs are ON and fade in and out when touching the slider, like the Arcade cab.
 
-Arcade: 
-LEDs are ON and fade in and out when touching the slider, like the Arcade cab. (Recommended)</value>
+FULL ARCADE: 
+Same as ARCADE mode, but with a lot of simulated effects from the Arcade cab on top.</value>
   </data>
   <data name="trackBar_calibration.ToolTip" xml:space="preserve">
     <value>How many sensors have to be fully calibrated to exit Calibration mode.
