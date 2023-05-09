@@ -1,5 +1,9 @@
+
 This file will contain all the informations needed to make your slider correctly.
 (For the settings, and different modes, PLEASE CHECK THE IMAGES "Slider XXXX.png" for more informations.)
+
+(NEW PC MANAGER IS NOW AVAILABLE! 
+It will be way easier to manage your controller with this new tool, but informations to edit your settings directly from the controller are still available in this file)
  
 - Installation:
 	(Not Available for now, please follow the ReadMe as you can, and use this project only if you know what you're doing)
