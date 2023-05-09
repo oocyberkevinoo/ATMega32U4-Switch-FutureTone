@@ -1,10 +1,13 @@
 ## Project Diva Controller (Switch)
 
 ### PDAC Manager released!
-This PC manager will help you to adjust settings easily, and let you store on your PC different configurations so you can try different things without losing a specific setup.
-[PDAC Manager link](PDAC%20Manager/Release)
-A HUGE thanks to [CrazyRedMachine](https://github.com/CrazyRedMachine) that helped me A LOT on the USB Protocol to communicate with the controller easier.
+This PC manager will help you to adjust settings easily, and let you store on your PC different configurations so you can try different things without losing a specific setup. 
 
+[PDAC Manager link](PDAC%20Manager/Release)
+
+Thanks to [CrazyRedMachine](https://github.com/CrazyRedMachine) that helped me A LOT on the USB Protocol to communicate with the controller easier.
+
+## Help
 (A LOT OF NEW TIPS AND HELP INFORMATIONS HAVE BEEN ADDED, PLEASE CHECK "HELP.TXT"
 
 A "UPDATE LOG.TXT" IS ALSO AVAILABLE)
@@ -18,8 +21,14 @@ You'll need the exact same hardware and libraries as the original repo (+ The [Q
 
 Thanks to [Somewhatlurker](https://github.com/somewhatlurker), [Dogtopus](https://github.com/dogtopus/), [TheCorrellRoyHD](https://twitter.com/correllroy), [Zedamex](https://www.youtube.com/channel/UCZ-jUHyriPCuebtpx48MPdQ) for all the needed datas, informations, and help on developping this project.
 
+
 ## Preview of the slider with the 3 different Leds modes available (HORI, HORI+Arcade, Arcade)
+Note that HORI+Arcade have been replace by ARCADE, and FULL ARCADE is now available with even more effects from the original cab.
+Preview soon.
+
 ![Gif Loading...](ezgif-1-74ecb11183.gif)
+
+
 
 
 ## LUFA & QuickMPR121 use
@@ -30,11 +39,7 @@ To flash code on a Arduino that is running LUFA code, you need to double press "
 ### QuickMPR121
 To use multiple MPR121s, here's this [layout](https://user-images.githubusercontent.com/22883203/132257503-b0a68036-46a7-43d3-a15f-b2952b6a3bcc.png)
 
-
-## TO DO
-- PS4 Support
-
-## NEW NAVIGATION SHORTCUT MODE /!\
+## NAVIGATION SHORTCUT MODE /!\
 ### What it is ?
 It let you hold a button to change how the controller behave, it's useful if you don't have enough buttons on your controller.
 You can even map part of the slider to buttons.
@@ -43,6 +48,62 @@ You can even map part of the slider to buttons.
 If you update your code from now, your button mapping changed for buttons like HOME button.
 Please check and adapt this new mode to your desire.
 (Check the ControllerNavShortcut.jpg to see where, and how it act by default.)
+
+## Building Instructions
+
+- Download Arduino IDE, 
+
+- Download the Bounce2 Library inside the Arduino IDE
+- Add `https://github.com/CrazyRedMachine/Arduino-Lufa/raw/master/package_arduino-lufa_index.json` as an Additional Board Manager URL (in `File -> Preferences` menu)
+(check the repo readme for screencaps if you need more details)
+- Install LUFA AVR Boards from the Board Manager
+- Select Arduino Leonardo (LUFA) as your board type
+- Build and Flash
+- Have Fun
+
+## REFLASH Instruction
+
+
+Once your Arduino have been flashed with LUFA, you'll need to put your Arduino in Reset mode to accept a new flash.
+Create a button on your RST pin then when you try to flash your Arduino, you will see your IDE searching for a COM to upload...
+At that moment, press your RST button twice, it should put it into Reset mode, and your IDE should find it.
+
+
+IF YOUR IDE DON'T FIND YOUR ARDUINO IN RESET MODE:
+PLEASE DON'T PANIC AND DO NOT PRESS RESET TWICE AGAIN!
+All you have to do is either waiting for your Arduino to come back at a normal controller state, then try again.
+Or you can just press the RST button again ONLY ONCE to make it go back to normal state, then try again.
+
+
+IF YOUR ARDUINO IS LOCKED IN RESET MODE:
+Please, just let it plugged in, and wait.
+It will certainly happen if your press your RST button too much, Windows will not recognize it anymore, 
+and you'll have to wait for your Arduino to get out of this mode.
+It can take up to minutes to do.
+
+
+## Pinmapping (UPDATED FOR THIS FORK !)
+
+Here is the Pinnumbers to Button Mapping for Connecting the actual physical cables to a Pro Micro.
+	
+
+
+	joystickLEFT.attach(1,INPUT_PULLUP); // Pin 1 -> LEFT
+	joystickRIGHT.attach(0,INPUT_PULLUP); // Pin 0 -> RIGHT
+	buttonA.attach(4,INPUT_PULLUP); // Pin 4 -> A / Circle
+	buttonB.attach(5,INPUT_PULLUP); // Pin 5 -> B / Cross
+	buttonX.attach(7,INPUT_PULLUP); // Pin 7 -> X / Triangle
+	buttonY.attach(6,INPUT_PULLUP); // Pin 6 -> Y / Square
+	buttonLB.attach(9,INPUT_PULLUP); // Pin 9 -> LB
+	buttonRB.attach(8,INPUT_PULLUP); // Pin 8 -> RB
+	buttonLT.attach(16,INPUT_PULLUP); // Pin 16 -> LT
+	buttonRT.attach(10,INPUT_PULLUP); // Pin 10 -> RT
+	buttonSTART.attach(15,INPUT_PULLUP); // Pin 15 -> plus
+	buttonSELECT.attach(14,INPUT_PULLUP); // Pin 14 -> minus
+	//buttonHOME.attach(18,INPUT_PULLUP); // Pin 18 -> Home
+	navModePin.attach(18,INPUT_PULLUP); // Pin 18 -> Navigation Mode Shortcut
+	
+	switchModePin.attach(19,INPUT_PULLUP); // Pin 19 -> Switch Mode
 
 # (Below is the original ReadMe)
 
@@ -59,53 +120,9 @@ You can switch seamlessly between the 3 modes by pressing START+SELECT.
 - Fake Analog (Digital Movement is mapped to L-Analog)
 - Smash Ultimate Mode (Most-left button on the second row of a fight stick is used as a modifier key to decrease the range of the Analog stick, if held)
 
-## Building Instructions
 
-- Download Arduino IDE, 
-
-- Download the Bounce2 Library inside the Arduino IDE
-- Add `https://github.com/CrazyRedMachine/Arduino-Lufa/raw/master/package_arduino-lufa_index.json` as an Additional Board Manager URL (in `File -> Preferences` menu)
-(check the repo readme for screencaps if you need more details)
-- Install LUFA AVR Boards from the Board Manager
-- Select Arduino Leonardo (LUFA) as your board type
-- Build and Flash
-- Have Fun
-
-## Pinmapping (UPDATED FOR THIS FORK !)
-
-Here is the Pinnumbers to Button Mapping for Connecting the actual physical cables to a Pro Micro.
 	
-
-	joystickLEFT.attach(1,INPUT_PULLUP);
-
-	joystickRIGHT.attach(0,INPUT_PULLUP);
-
-	buttonA.attach(4,INPUT_PULLUP);
-
-	buttonB.attach(5,INPUT_PULLUP);
-
-	buttonX.attach(7,INPUT_PULLUP);
-
-	buttonY.attach(6,INPUT_PULLUP);
-
-	buttonLB.attach(9,INPUT_PULLUP);
-
-	buttonRB.attach(8,INPUT_PULLUP);
-
-	buttonLT.attach(16,INPUT_PULLUP);
-
-	buttonRT.attach(10,INPUT_PULLUP);
-
-	buttonSTART.attach(15,INPUT_PULLUP);
-
-	buttonSELECT.attach(14,INPUT_PULLUP);
-
-	//buttonHOME.attach(18,INPUT_PULLUP);
-	navModePin.attach(18,INPUT_PULLUP);
-	
-	switchModePin.attach(19,INPUT_PULLUP);
-
-### Credits
+### Original Credits
 
 Special thanks to shinyquagsire's and progmem's reverseengineering work for the pokken tournament controller. (https://github.com/progmem/Switch-Fightstick)
 
