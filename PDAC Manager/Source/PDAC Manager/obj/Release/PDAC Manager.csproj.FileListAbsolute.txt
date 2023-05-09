@@ -12,3 +12,4 @@ C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Mana
 C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.csproj.CopyComplete
 C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.exe
 C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.pdb
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC_Manager.Form_Color.resources

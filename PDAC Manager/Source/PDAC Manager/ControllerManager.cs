@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using HidLibrary;
 using System.IO;
 using System.Windows.Forms;
+using System.Drawing;
 
 namespace PDAC_Manager
 {
@@ -25,6 +26,10 @@ namespace PDAC_Manager
             public const byte SetSetting =          0x03;
             public const byte Reload =              0x04;
             public const byte Calibrate =           0x05;
+            public const byte ColorTest =           0x06;
+            public const byte TrailTest =           0x07;
+            public const byte NoTouchColorTest =    0x08;
+            public const byte TouchColorTest =      0x09;
 
         }
         static public class PDAC_Configs
@@ -58,14 +63,19 @@ namespace PDAC_Manager
         static byte[] LedsMode = new byte[]         { 0x00, 0x01, 0x02 };
         static byte[] HalfLedsMode = new byte[]     { 0x00, 0x01 };
 
-        static int version = 512;
+        static int version = 513;
         static Form1 form1;
+        static Form_Color formColor;
         /*static HidDevice device;
         static HidStream stream;*/
 
         static public void Initialize(Form1 form)
         {
             form1 = form;
+        }
+        static public void InitializeColor(Form_Color form)
+        {
+            formColor = form;
         }
         static public void ConnectController()
         {
@@ -84,7 +94,11 @@ namespace PDAC_Manager
                         form1.UpdateLog($"\r\nDIVA CONTROLLER IS CONNECTED!");
                         //form1.UpdateLog($"{d.DevicePath}");
                         if (d.Attributes.Version != version)
+                        {
                             form1.UpdateLog($"WARNING! YOUR CONTROLLER IS NOT UPDATED!\r\nPlease update your controller or use a previous version of this software.");
+                            return;
+                        }
+                            
                         form1.SetConnectState(true);
                         controller = d;
 
@@ -141,12 +155,14 @@ namespace PDAC_Manager
             
         }
 
-        static public void LoadConfigFromController(bool backup = false)
+        static public void LoadConfigFromController(bool backup = false, string mode = "settings")
         {
             byte offset = 0x00;
             if (backup)
                 offset = 0x0A;
             
+
+
             try
             {
                 form1.trackBar_LEDsBrightness.Value =
@@ -234,11 +250,11 @@ namespace PDAC_Manager
             
         }
 
-        static public byte AskController(byte command, byte value = 0x00, byte value2 = 0x00)
+        static public byte AskController(byte command, byte value = 0x00, byte value2 = 0x00, byte value3 = 0x00)
         {
 
    
-            byte[] data = new byte[] {REPORT_ID, command, value, value2 };
+            byte[] data = new byte[] {REPORT_ID, command, value, value2, value3 };
 
             if (!CheckingDeviceIsAvailable())
             {
@@ -326,7 +342,27 @@ namespace PDAC_Manager
             LoadConfigFromController(true);
 
         }
- 
+
+        public static void ColorUpdate(int mode, Color color)
+        {
+            AskController(PDAC_Commands.ColorTest, color.R, color.G, color.B);
+        }
+
+        public static void TrailTest(int r, int g, int b)
+        {
+            AskController(PDAC_Commands.TrailTest, (byte)r, (byte)g, (byte)b);
+        }
+
+        public static void NoTouchColorTest(int r, int g, int b)
+        {
+            AskController(PDAC_Commands.NoTouchColorTest, (byte)r, (byte)g, (byte)b);
+        }
+
+        public static void TouchColorTest(int r, int g, int b)
+        {
+            AskController(PDAC_Commands.TouchColorTest, (byte)r, (byte)g, (byte)b);
+        }
+
 
         private static string GetProductString(HidDevice d)
         {

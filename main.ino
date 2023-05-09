@@ -13,6 +13,9 @@
 //Debug Timer
 unsigned long previousMillis = 0;
 unsigned long interval = 30;
+unsigned int globalTimer = 0;
+int globalCounter = 0;
+bool globalBool = false;
 
 // Buttons values
 byte buttonStatus[17] = {0};
@@ -106,7 +109,8 @@ typedef enum {
   SETTINGS,
   TRIGGER,
   CALIBRATE,
-  PPD
+  PPD,
+  COLORTEST
 } SliderMode;
 SliderMode sliderMode = GAMEPLAY;       // Default mode is GAMEPLAY
 SliderMode sliderModeChange = GAMEPLAY; // Transition mode, change it to change mode on button release correctly
@@ -168,6 +172,14 @@ short sensor32 = 0;
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS_PER_STRIP];
 //bool idleLeds = true;
+CRGB colorNoTouch = CRGB::Black;
+CRGB colorTouch = CRGB::White;
+CRGB colorTrail = CRGB(65, 49, 51);
+
+// PC Test Color
+int testR = 255;
+int testG = 255;
+int testB = 255;
 
 // BOUNCE BUTTONS
 Bounce joystickUP = Bounce();
@@ -375,6 +387,9 @@ void loop() {
       case CALIBRATE: // Calibrate slider
       calibrateSensors();
       processButtons();
+      break;
+      case COLORTEST: // Color Test Though PC
+      colorTest();
       break;
     }
 
@@ -859,21 +874,24 @@ void sliderGameplay(){
         lightUpBreathDirection = true;
      }
 
-     if(lightUpCurrent <= 0){
-      lightUpBreathDirection = false;
-      lightUpBreath = 0;
-     }
+     
     }else if(lightUpBreath != 0) lightUpBreath = 0; // Reset if not needed
      
 
-    
+        int newLight = lightUpCurrent / 5 - lightUpBreath / 100;
+        
+        if(newLight <= 0 && resultBits == noTouchBits && gameplayLightUp == 0x02){ // Fix timing to breath on touch
+      lightUpBreathDirection = false;
+      lightUpBreath = 0;
+     }
     
        bool lightUp = true;
        bool first = true;
-
+      
         for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
-          int newLight = lightUpCurrent / 5 - lightUpBreath / 100;
           if(newLight < 0) newLight = 0;
+
+          
           if(halfLedsMode){
             if(lightUp){
             if(!first){
@@ -893,12 +911,12 @@ void sliderGameplay(){
             lightUp = true;
             }
           }else
-            leds[i] = CRGB(newLight, newLight, newLight); 
+            leds[i] = CRGB(newLight + colorNoTouch.r, newLight + colorNoTouch.g, newLight + colorNoTouch.b); 
             
             
             
           if(sensors[i]){ // Lightup the touched sensor
-            leds[i] = CRGB::White;
+            leds[i] = colorTouch;
             lightUpTouchedTrail[i] = 75;  // Max Brightness to start with for trail effect
           } 
           else if(lightUpTouchedTrail[i] > 0 && gameplayLightUp == 0x02){  // Only for FULL ARCADE - Trail effect: Transition light when not touched anymore
@@ -906,9 +924,9 @@ void sliderGameplay(){
             if(lightUpTouchedTrail[i] < 0) lightUpTouchedTrail[i] = 0;
             
             // Turquoise transition start...
-            int R = (lightUpTouchedTrail[i] - 65);
-            int G = (lightUpTouchedTrail[i] - 49);
-            int B = (lightUpTouchedTrail[i] - 51);
+            int R = (lightUpTouchedTrail[i] - colorTrail.r/*65*/);
+            int G = (lightUpTouchedTrail[i] - colorTrail.g/*49*/);
+            int B = (lightUpTouchedTrail[i] - colorTrail.b/*51*/);
             if(R < 0) R = 0;
             if(G < 0) G = 0;
             if(B < 0) B = 0;
@@ -930,7 +948,7 @@ void sliderGameplay(){
     
     for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){  // Lightup the touched sensor
       if(sensors[i]){
-        leds[i] = CRGB::White;
+        leds[i] = colorTouch;
 
         if(lightUpCurrent != 0 && gameplayLightUp == 0x01) lightUpCurrent = 0;
         if(lightUpTimer != 25 && gameplayLightUp == 0x01) lightUpTimer = 25;
@@ -1322,14 +1340,14 @@ else if(pushedSettings5){
       pushedSettings8 = true;
     }
   else if(pushedSettings8){
-    EEPROM.write(10, EEPROM.read(0));
-    EEPROM.write(11, EEPROM.read(1));
-    EEPROM.write(12, EEPROM.read(2));
-    EEPROM.write(13, EEPROM.read(3));
-    EEPROM.write(14, EEPROM.read(4));
-    EEPROM.write(15, EEPROM.read(5));
-    EEPROM.write(16, EEPROM.read(6));
-    EEPROM.write(17, EEPROM.read(7));
+    EEPROM.update(10, EEPROM.read(0));
+    EEPROM.update(11, EEPROM.read(1));
+    EEPROM.update(12, EEPROM.read(2));
+    EEPROM.update(13, EEPROM.read(3));
+    EEPROM.update(14, EEPROM.read(4));
+    EEPROM.update(15, EEPROM.read(5));
+    EEPROM.update(16, EEPROM.read(6));
+    EEPROM.update(17, EEPROM.read(7));
     settingsLoader();
     pushedSettings8 = false;
     } 
@@ -1340,14 +1358,14 @@ else if(pushedSettings5){
       pushedSettings9 = true;
     }
   else if(pushedSettings9){
-    EEPROM.write(0, EEPROM.read(10));
-    EEPROM.write(1, EEPROM.read(11));
-    EEPROM.write(2, EEPROM.read(12));
-    EEPROM.write(3, EEPROM.read(13));
-    EEPROM.write(4, EEPROM.read(14));
-    EEPROM.write(5, EEPROM.read(15));
-    EEPROM.write(6, EEPROM.read(16));
-    EEPROM.write(7, EEPROM.read(17));
+    EEPROM.update(0, EEPROM.read(10));
+    EEPROM.update(1, EEPROM.read(11));
+    EEPROM.update(2, EEPROM.read(12));
+    EEPROM.update(3, EEPROM.read(13));
+    EEPROM.update(4, EEPROM.read(14));
+    EEPROM.update(5, EEPROM.read(15));
+    EEPROM.update(6, EEPROM.read(16));
+    EEPROM.update(7, EEPROM.read(17));
     settingsLoader();
     FastLED.setBrightness(LEDBrightnessLoad());
     pushedSettings9 = false;
@@ -1493,7 +1511,7 @@ void updateSettings(int index, byte _size){
       temp++;
     else
       temp = 0x00;
-    EEPROM.write(index, temp);
+    EEPROM.update(index, temp);
   }
 
 void buttonRead(){
@@ -1629,14 +1647,17 @@ void resetButtons(){
   buttonStatus[BUTTONRIGHT] = false;
 }
 
+void colorTest(){
+  
+}
+
 extern "C"{
   byte ReadEEPROM(int i){ 
     return EEPROM.read(i);
     }
 
   void WriteEEPROM(int i, byte value){
-    if(EEPROM.read(i) != value)
-      EEPROM.write(i, value);
+    EEPROM.update(i, value);
   }
 
   void PDAC_PC_RELOAD(){ // Reload settings
@@ -1647,6 +1668,81 @@ extern "C"{
   void PDAC_PC_CALIBRATE(){ // Calibrate slider with new settings
     calibrateSensors();
       processButtons();
+  }
+
+
+  void PDAC_PC_COLORTEST_CHANGECOLOR(int r, int g, int b){
+    sliderModeChange = COLORTEST;
+    sliderMode = COLORTEST;
+    for (CRGB &led : leds){
+      led = CRGB(r,g, b);
+    }
+    
+  }
+
+  void PDAC_PC_TRAILTEST_RESETLINE(){
+    globalCounter = 0;
+    globalBool = false;
+  }
+
+  void PDAC_PC_TRAILTEST_CHANGECOLOR(int r, int g, int b){
+    sliderModeChange = COLORTEST;
+    sliderMode = COLORTEST;
+    colorTrail = CRGB(r,g,b);
+    for (CRGB &led : leds){
+      led = CRGB::Black;
+    }
+
+    sensors[globalCounter] = true;
+    
+     for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
+      if(sensors[i]){ // Lightup the touched sensor
+            leds[i] = colorTouch;
+            lightUpTouchedTrail[i] = 75;  // Max Brightness to start with for trail effect
+          } 
+          else if(lightUpTouchedTrail[i] > 0 && gameplayLightUp == 0x02){  // Only for FULL ARCADE - Trail effect: Transition light when not touched anymore
+            lightUpTouchedTrail[i] -= 1;  // Transition speed
+            if(lightUpTouchedTrail[i] < 0) lightUpTouchedTrail[i] = 0;
+            
+            // Turquoise transition start...
+            int R = (lightUpTouchedTrail[i] - colorTrail.r);
+            int G = (lightUpTouchedTrail[i] - colorTrail.g);
+            int B = (lightUpTouchedTrail[i] - colorTrail.b);
+            if(R < 0) R = 0;
+            if(G < 0) G = 0;
+            if(B < 0) B = 0;
+
+            // output result
+            leds[i] = leds[i] + CRGB(R,G,B);
+          }
+     }
+     
+    sensors[globalCounter] = false;
+    if(globalCounter == 0)
+      globalBool = false;
+    else if(globalCounter == 32)
+      globalBool = true;  
+      
+    if(!globalBool)
+      globalCounter++;
+    else
+      globalCounter--;
+
+    
+    
+  }
+
+  void PDAC_PC_NOTOUCHCOLORTEST(int r, int g, int b){
+    sliderModeChange = GAMEPLAY;
+    sliderMode = GAMEPLAY;
+    colorNoTouch = CRGB(r,g,b);
+  }
+
+  void PDAC_PC_TOUCHCOLORTEST(int r, int g, int b){
+    colorTouch = CRGB(r,g,b);
+    if(sliderMode == COLORTEST){
+      leds[31] = colorTouch;
+    }
   }
 
   void PDAC_PC_SERVICE(){ // Put the controller in service mode

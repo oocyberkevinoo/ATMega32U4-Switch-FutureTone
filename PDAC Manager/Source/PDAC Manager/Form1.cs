@@ -8,6 +8,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace PDAC_Manager
 {
@@ -35,6 +36,7 @@ namespace PDAC_Manager
             else
                 btn_connect.Text = "Connect to controller";
             btn_upload.Enabled = connected;
+            btn_colors.Enabled = connected;
             
             btn_settingsLoadFile.Enabled = connected;
             btn_settingsSaveFile.Enabled = connected;
@@ -104,6 +106,20 @@ namespace PDAC_Manager
             ControllerManager.SaveSettingsToFile();
             ControllerManager.LoadConfigFromController();
 
+        }
+
+        private void button_color_Click(object sender, EventArgs e)
+        {
+            if (colorDialog1.ShowDialog() == DialogResult.OK)
+            {
+                ControllerManager.ColorUpdate(0, colorDialog1.Color);
+            }
+        }
+
+        private void button_trail_Click(object sender, EventArgs e)
+        {
+            Form_Color form = new Form_Color();
+            form.ShowDialog();
         }
     }
 }

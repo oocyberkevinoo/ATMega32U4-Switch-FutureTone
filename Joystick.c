@@ -41,21 +41,23 @@ void EVENT_USB_Device_ControlRequest(void) {
      static byte command = 0x00;
      static byte value1 = 0x00;
      static byte value2 = 0x00;
+     static byte value3 = 0x00;
 /* get feature */
 if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
 {
   if (USB_ControlRequest.bRequest == HID_REQ_GetReport)
   {
-      uint8_t feature_data[3] = {USB_ControlRequest.wValue & 0xFF};
-      uint8_t feature_data_size = 4;
+      uint8_t feature_data[4] = {USB_ControlRequest.wValue & 0xFF};
+      uint8_t feature_data_size = 5;
 
       feature_data[1] = 0;
       feature_data[2] = 0;
       feature_data[3] = 0;
+      feature_data[4] = 0;
       
       switch (USB_ControlRequest.wValue & 0xFF) /* contains report id */
       {
-        case 4: // Get if the controller already used the Manager
+        case 4:
 
           switch(command){
             case PDM_PC_Used:  // Checking if it's a first time using manager
@@ -83,15 +85,30 @@ if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | R
             case PDM_PC_Calibrate:  // Recalibrate the slider
             PDAC_PC_CALIBRATE();
             break;
+
+            case PDM_PC_ColorTest:
+            PDAC_PC_COLORTEST_CHANGECOLOR(value1, value2, value3);
+            break;
+
+            case PDM_PC_TrailTest:
+            for(int i = 0; i < 32; i++)
+              PDAC_PC_TRAILTEST_CHANGECOLOR(value1, value2, value3);
+            PDAC_PC_TRAILTEST_RESETLINE();
+            break;
+
+            case PDM_PC_NoTouchColorTest:
+            PDAC_PC_NOTOUCHCOLORTEST(value1, value2, value3);
+            break;
+
+            case PDM_PC_TouchColorTest:
+            PDAC_PC_TOUCHCOLORTEST(value1, value2, value3);
+            PDAC_PC_TRAILTEST_RESETLINE();
+            break;
             
             default:
             break;
           }
         
-
-          
-          
-          //PDAC_PC_Used_Update();
           break;
         default:
           break;
@@ -122,10 +139,11 @@ else if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLAS
       switch (USB_ControlRequest.wValue & 0xFF) /* contains report id */
       {
         case 4:
-          Endpoint_Read_Control_Stream_LE(recv_data, 4);
+          Endpoint_Read_Control_Stream_LE(recv_data, 5);
           command = recv_data[1];
           value1 = recv_data[2];
           value2 = recv_data[3];
+          value3 = recv_data[4];
           break;
         default:
           break;

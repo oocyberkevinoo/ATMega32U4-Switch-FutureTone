@@ -51,9 +51,6 @@
 #include <LUFA/LUFA/Drivers/Board/Buttons.h>
 #include <LUFA/LUFA/Platform/Platform.h>
 
-<<<<<<< Updated upstream
-bool PDM_PC;
-=======
 #define PDM_PC_GET_USED 0x01;
 
 
@@ -64,10 +61,13 @@ enum Commands {
     PDM_PC_GetConfig =            0x02,
     PDM_PC_SetConfig =            0x03,
     PDM_PC_Reload =               0x04,
-    PDM_PC_Calibrate =            0x05
+    PDM_PC_Calibrate =            0x05,
+    PDM_PC_ColorTest =            0x06,
+    PDM_PC_TrailTest =            0x07,
+    PDM_PC_NoTouchColorTest =     0x08,
+    PDM_PC_TouchColorTest =       0x09
 
 };
->>>>>>> Stashed changes
 
 // Joystick HID report structure. We have an input and an output.
 typedef struct {
