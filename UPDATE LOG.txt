@@ -1,3 +1,15 @@
+09/05/2023 - HUGE 2.0 UPDATE!
+This update brings you a lot of new effects for your controller, stability, but also : A CONTROLLER MANAGER (Windows only for now)
+
+Controller update:
+- New sensitivity settings (shouldn't change your current, just capable to do more now)
+- New Lights modes (HORI, ARCADE, and the new mode FULL ARCADE that add a lot of visual effects from the official cab. "HORI + ARCADE" have been replaced by the previous "ARCADE" mode)
+
+PDAC Manager:
+- Release of the 0.0.2 version
+
+
+
 24/10/2022 - Navigation Mode Shortcut
 - You can now set how the Navigation Button works : while pressing or push/release
 - Fixed colors when using the NAV mode
