@@ -2,7 +2,7 @@
 
 ### PDAC Manager released!
 This PC manager will help you to adjust settings easily, and let you store on your PC different configurations so you can try different things without losing a specific setup.
-[PDAC Manager link](https://github.com/oocyberkevinoo/ATMega32U4-Switch-ProjectDiva/PDAC%20Manager/Release)
+[PDAC Manager link](PDAC%20Manager/Release)
 
 (A LOT OF NEW TIPS AND HELP INFORMATIONS HAVE BEEN ADDED, PLEASE CHECK "HELP.TXT"
 
