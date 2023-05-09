@@ -1,0 +1,15 @@
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\bin\Release\PDAC Manager.exe.config
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\bin\Release\PDAC Manager.exe
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\bin\Release\PDAC Manager.pdb
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\bin\Release\HidLibrary.dll
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\bin\Release\HidLibrary.pdb
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.csproj.AssemblyReference.cache
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.csproj.SuggestedBindingRedirects.cache
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC_Manager.Form1.resources
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC_Manager.Properties.Resources.resources
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.csproj.GenerateResource.cache
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.csproj.CoreCompileInputs.cache
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.csproj.CopyComplete
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.exe
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC Manager.pdb
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Release\PDAC_Manager.Form_Color.resources

@@ -51,6 +51,23 @@
 #include <LUFA/LUFA/Drivers/Board/Buttons.h>
 #include <LUFA/LUFA/Platform/Platform.h>
 
+#define PDM_PC_GET_USED 0x01;
+
+
+bool PDM_PC;
+
+enum Commands {
+    PDM_PC_Used =                 0x01,
+    PDM_PC_GetConfig =            0x02,
+    PDM_PC_SetConfig =            0x03,
+    PDM_PC_Reload =               0x04,
+    PDM_PC_Calibrate =            0x05,
+    PDM_PC_ColorTest =            0x06,
+    PDM_PC_TrailTest =            0x07,
+    PDM_PC_NoTouchColorTest =     0x08,
+    PDM_PC_TouchColorTest =       0x09
+
+};
 
 // Joystick HID report structure. We have an input and an output.
 typedef struct {
@@ -74,6 +91,29 @@ typedef struct {
 	uint8_t  RX;     // Right Stick X
 	uint8_t  RY;     // Right Stick Y
 } USB_JoystickReport_Output_t;
+
+// SERVICE MODE
+typedef struct {
+  uint16_t SM_REQ;
+  uint8_t  SM_DATA;
+  uint8_t  LX;     // Left  Stick X
+  uint8_t  LY;     // Left  Stick Y
+  uint8_t  RX;     // Right Stick X
+  uint8_t  RY;     // Right Stick Y
+  uint8_t  VendorSpec;
+} USB_ServiceModeReport_Input_t;
+extern USB_ServiceModeReport_Input_t SM_ReportDataIN;
+
+typedef struct {
+  uint16_t SM_REQ;
+  uint8_t  SM_DATA;
+  uint8_t  LX;     // Left  Stick X
+  uint8_t  LY;     // Left  Stick Y
+  uint8_t  RX;     // Right Stick X
+  uint8_t  RY;     // Right Stick Y
+  uint8_t  VendorSpec;
+} USB_ServiceModeReport_Output_t;
+extern USB_ServiceModeReport_Output_t SM_ReportDataOUT;
 
 /* Function Prototypes: */
 #ifdef __cplusplus

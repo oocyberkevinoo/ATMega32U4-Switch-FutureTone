@@ -57,6 +57,24 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM JoystickReport[] = {
   HID_RI_END_COLLECTION(0),
 };
 
+const USB_Descriptor_HIDReport_Datatype_t PROGMEM LEDReport[] =
+{
+  HID_RI_USAGE_PAGE(8, 0x01), /* Generic Desktop */
+  HID_RI_USAGE(8, 0x00), /* Undefined */
+  HID_RI_COLLECTION(8, 0x01), /* Application */
+
+  // Feature Report for software manager.
+  HID_RI_REPORT_ID(8, 4),               
+  HID_RI_USAGE(8, 0x00), /* Undefined */        
+  HID_RI_LOGICAL_MINIMUM(8, 0x00),            
+  HID_RI_LOGICAL_MAXIMUM(8, 0xFF),    
+  HID_RI_REPORT_SIZE(8, 0x08),                
+  HID_RI_REPORT_COUNT(8, 4),                
+  HID_RI_FEATURE(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+  
+  HID_RI_END_COLLECTION(0),
+};
+
 // Device Descriptor Structure
 const USB_Descriptor_Device_t PROGMEM DeviceDescriptor = {
   .Header                 = {.Size = sizeof(USB_Descriptor_Device_t), .Type = DTYPE_Device},
@@ -71,7 +89,7 @@ const USB_Descriptor_Device_t PROGMEM DeviceDescriptor = {
   .VendorID               = 0x0F0D,
   //.ProductID              = 0x0092,
   .ProductID              = 0x00FB,
-  .ReleaseNumber          = VERSION_BCD(1,0,0),
+  .ReleaseNumber          = VERSION_BCD(2,0,1),
 
   .ManufacturerStrIndex   = STRING_ID_Manufacturer,
   .ProductStrIndex        = STRING_ID_Product,
@@ -87,7 +105,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
       .Header                 = {.Size = sizeof(USB_Descriptor_Configuration_Header_t), .Type = DTYPE_Configuration},
 
       .TotalConfigurationSize = sizeof(USB_Descriptor_Configuration_t),
-      .TotalInterfaces        = 1,
+      .TotalInterfaces        = 2,
 
       .ConfigurationNumber    = 1,
       .ConfigurationStrIndex  = NO_DESCRIPTOR,
@@ -143,13 +161,40 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
       .EndpointSize           = JOYSTICK_EPSIZE,
       .PollingIntervalMS      = 0x10
     },
+  /* LIGHTS */
+  .HID_LightInterface =
+  {
+    .Header                 = {.Size = sizeof(USB_Descriptor_Interface_t), .Type = DTYPE_Interface},
+
+    .InterfaceNumber        = INTERFACE_ID_Light,
+    .AlternateSetting       = 0x00,
+
+    .TotalEndpoints         = 0,
+
+    .Class                  = HID_CSCP_HIDClass,
+    .SubClass               = HID_CSCP_NonBootSubclass,
+    .Protocol               = HID_CSCP_NonBootProtocol,
+
+    .InterfaceStrIndex      = NO_DESCRIPTOR
+  },
+
+  .HID_LightHID =
+  {
+    .Header                 = {.Size = sizeof(USB_HID_Descriptor_HID_t), .Type = HID_DTYPE_HID},
+
+    .HIDSpec                = VERSION_BCD(1, 1, 1),
+    .CountryCode            = 0x00,
+    .TotalReportDescriptors = 1,
+    .HIDReportType          = HID_DTYPE_Report,
+    .HIDReportLength        = sizeof(LEDReport)
+  },
 };
 
 // Language Descriptor Structure
 const USB_Descriptor_String_t PROGMEM LanguageString = USB_STRING_DESCRIPTOR_ARRAY(LANGUAGE_ID_ENG);
 
 // Manufacturer and Product Descriptor Strings
-const USB_Descriptor_String_t PROGMEM ManufacturerString = USB_STRING_DESCRIPTOR(L"HORI CO.,LTD.");
+const USB_Descriptor_String_t PROGMEM ManufacturerString = USB_STRING_DESCRIPTOR(L"CyberKevin");
 const USB_Descriptor_String_t PROGMEM ProductString      = USB_STRING_DESCRIPTOR(L"DIVA CONTROLLER");
 
 // USB Device Callback - Get Descriptor
@@ -192,12 +237,30 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 
       break;
     case DTYPE_HID:
-      Address = &ConfigurationDescriptor.HID_JoystickHID;
-      Size    = sizeof(USB_HID_Descriptor_HID_t);
+      switch (wIndex)
+      {
+        case (INTERFACE_ID_Joystick):
+          Address = &ConfigurationDescriptor.HID_JoystickHID;
+          Size    = sizeof(USB_HID_Descriptor_HID_t);
+          break;
+        case (INTERFACE_ID_Light):
+          Address = &ConfigurationDescriptor.HID_LightHID;
+          Size    = sizeof(USB_HID_Descriptor_HID_t);
+          break;
+      }
       break;
     case DTYPE_Report:
-      Address = &JoystickReport;
-      Size    = sizeof(JoystickReport);
+      switch (wIndex)
+      {
+        case (INTERFACE_ID_Joystick):
+          Address = &JoystickReport;
+          Size    = sizeof(JoystickReport);
+          break;
+        case (INTERFACE_ID_Light):
+          Address = &LEDReport;
+          Size    = sizeof(LEDReport);
+          break;
+      }
       break;
   }
 

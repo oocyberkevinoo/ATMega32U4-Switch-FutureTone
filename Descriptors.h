@@ -17,12 +17,16 @@ typedef struct
   USB_HID_Descriptor_HID_t              HID_JoystickHID;
   USB_Descriptor_Endpoint_t             HID_ReportOUTEndpoint;
   USB_Descriptor_Endpoint_t             HID_ReportINEndpoint;
+  // Light
+  USB_Descriptor_Interface_t            HID_LightInterface;
+  USB_HID_Descriptor_HID_t              HID_LightHID;
 } USB_Descriptor_Configuration_t;
 
 // Device Interface Descriptor IDs
 enum InterfaceDescriptors_t
 {
   INTERFACE_ID_Joystick = 0, /**< Joystick interface descriptor ID */
+  INTERFACE_ID_Light = 1, /**< Joystick interface descriptor ID */
 };
 
 // Device String Descriptor IDs
@@ -37,10 +41,12 @@ enum StringDescriptors_t
 // Endpoint Addresses
 #define JOYSTICK_IN_EPADDR  (ENDPOINT_DIR_IN  | 1)
 #define JOYSTICK_OUT_EPADDR (ENDPOINT_DIR_OUT | 2)
+#define LIGHT_EPSIZE           64
 // HID Endpoint Size
 // The Switch -needs- this to be 64.
 // The Wii U is flexible, allowing us to use the default of 8 (which did not match the original Hori descriptors).
 #define JOYSTICK_EPSIZE           64
+#define OTHER_EPSIZE           64
 // Descriptor Header Type - HID Class HID Descriptor
 #define DTYPE_HID                 0x21
 // Descriptor Header Type - HID Class HID Report Descriptor
@@ -53,4 +59,3 @@ enum StringDescriptors_t
                                         ATTR_WARN_UNUSED_RESULT ATTR_NON_NULL_PTR_ARG(3);
 
 #endif
-

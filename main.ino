@@ -5,6 +5,7 @@
 #include "Joystick.h"
 #include <Bounce2.h>
 #include <EEPROM.h>
+//#include "Settings.h"
 
 #define BOUNCE_WITH_PROMPT_DETECTION
 #define MILLIDEBOUNCE 1 //Debounce time in milliseconds
@@ -12,6 +13,9 @@
 //Debug Timer
 unsigned long previousMillis = 0;
 unsigned long interval = 30;
+unsigned int globalTimer = 0;
+int globalCounter = 0;
+bool globalBool = false;
 
 // Buttons values
 byte buttonStatus[17] = {0};
@@ -105,7 +109,8 @@ typedef enum {
   SETTINGS,
   TRIGGER,
   CALIBRATE,
-  PPD
+  PPD,
+  COLORTEST
 } SliderMode;
 SliderMode sliderMode = GAMEPLAY;       // Default mode is GAMEPLAY
 SliderMode sliderModeChange = GAMEPLAY; // Transition mode, change it to change mode on button release correctly
@@ -138,10 +143,19 @@ byte sliderOffsetRelease = 0x00;
 byte gameplayLightUp = 0x00;
 
 
+
 // Slider LightUp Effect
+bool halfLedsMode = false;
+
 int lightUpTimer = 0;
 int lightUpMax = 25*5;
 int lightUpCurrent = 0;
+
+bool lightUpBreathDirection = false;
+int lightUpBreathTimer = 0;
+float lightUpBreath = 1;
+
+double lightUpTouchedTrail[32];
 
 int lightWave = 0;
 
@@ -158,6 +172,14 @@ short sensor32 = 0;
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS_PER_STRIP];
 //bool idleLeds = true;
+CRGB colorNoTouch = CRGB::Black;
+CRGB colorTouch = CRGB::White;
+CRGB colorTrail = CRGB(65, 49, 51);
+
+// PC Test Color
+int testR = 255;
+int testG = 255;
+int testB = 255;
 
 // BOUNCE BUTTONS
 Bounce joystickUP = Bounce();
@@ -290,6 +312,7 @@ void settingsLoader(){ // Load settings from EEPROM that need fast load
   sliderFilter1 = EEPROM.read(2);
   sliderFilter2 = EEPROM.read(3);
   gameplayLightUp = EEPROM.read(5);
+  halfLedsMode = EEPROM.read(8);
   }
   
 
@@ -301,10 +324,16 @@ void setup() {
   ledsInitialization();         // Initialise Leds...
   SetupHardware();              // Setup Hardware...
   GlobalInterruptEnable();
+
+  
 }
 
 // Arduino Loop process...
 void loop() {
+
+  if(!PDM_PC){ // if not in PC Maintenance mode
+      
+  
     buttonRead();   // Buttons state
     checkSensors(); // Sensors state
 
@@ -359,9 +388,34 @@ void loop() {
       calibrateSensors();
       processButtons();
       break;
+      case COLORTEST: // Color Test Though PC
+      colorTest();
+      break;
     }
 
+  }else{ // PC Maintenance Mode
     
+    //LEDS
+    for (CRGB &led : leds){
+      led = CRGB::Black;
+    }
+    leds[2] = CRGB::Red;
+    leds[3] = CRGB::Green;
+    leds[4] = CRGB::Blue;
+  
+    // Wait for commands...
+    bool PDM_PC_busy = false;
+    SM_ReportDataIN.SM_REQ = 0x11;
+    SM_ReportDataIN.SM_DATA = 0x12;
+
+    
+    if(PDM_PC_busy) // if upload is engaged, LEDS are red to warn to not disconnect the controller, just in case the upload is slow for whatever reason.
+      leds[6] = CRGB::Red;
+      else
+      leds[6] = CRGB::Black;
+ 
+    
+  }
     
     HID_Task();
     // We also need to run the main USB management task.
@@ -463,7 +517,7 @@ int SensitivityLoad(){  // Sensitivity of sensors
     return 4;
     break;
     default:
-    return 11;
+    return 8;
     }
   }
 
@@ -520,14 +574,25 @@ int SensitivityLoad(){  // Sensitivity of sensors
 
     bool NAVShortcut(){
 switch(EEPROM.read(7)){
-  case 0x01:
+  case 0x00:
   return true;
   break;
   default:
   return false;
 }
-      
+}
+
+  bool HalfLedsMode(){
+    switch(EEPROM.read(8)){
+      case 0x01:
+      return true;
+      break;
+      default:
+      return false;
     }
+  }
+
+
 
 /*
  * SLIDER ENGINE
@@ -591,10 +656,10 @@ void checkSensors(){
         }
 
         // How many sensors touched ? (not used)
-      if(touching)
+      /*if(touching)
         touchedSensors++;
       else if(touchedSensors > 0)
-        touchedSensors--;
+        touchedSensors--;*/
 
 
       // Next sensor...
@@ -631,9 +696,9 @@ void checkSensors(){
   }
 
   // Check if at least one sensor is touched (not used)
-  if(touchedSensors > 0){
+  /*if(touchedSensors > 0){
     sensorTouched = true;
-    }
+    }*/
 }
 
 // Is a sensor has been just touched ? (Unused)
@@ -754,7 +819,7 @@ void sliderGameplay(){
     fill_rainbow(leds, NUM_LEDS_PER_STRIP, thisHue, -15); 
       
 
-  }else if(resultBits == noTouchBits && gameplayLightUp == 0x01){   // White pannel when not touching, with transition and buffer to make it smooth
+  }/*else if(resultBits == noTouchBits && gameplayLightUp == 0x01){   // ARCADE
     // Adjust timer and RGB values for LEDs
     if(lightUpTimer > 0) lightUpTimer--;
     if(lightUpCurrent < lightUpMax) lightUpCurrent++;
@@ -776,12 +841,13 @@ void sliderGameplay(){
             }
         }
    
-    }else if(gameplayLightUp == 0x02){
+    }*/else if(gameplayLightUp >= 0x01){ // ARCADE
       
     // Adjust timer and RGB values for LEDs
     if(resultBits == noTouchBits){
       if(lightUpTimer > 0) lightUpTimer--;
       if(lightUpCurrent < lightUpMax) lightUpCurrent++; 
+
     }
     else{
       if(lightUpTimer < 25) lightUpTimer = lightUpTimer+2;
@@ -790,92 +856,105 @@ void sliderGameplay(){
       if(lightUpTimer > 25) lightUpTimer = 25;
       if(lightUpCurrent < 0) lightUpCurrent = 0;
     }
+  
+    // Breath effect
+    if(gameplayLightUp == 0x02){ // Only for FULL ARCADE
+      int breathStrength = 1400;
+      int breathSpeed = 2;
+      
+      if(lightUpBreathDirection){
+      if(lightUpBreath < breathStrength)
+        lightUpBreath+= breathSpeed;
+      else
+        lightUpBreathDirection = false;
+     }else{
+      if(lightUpBreath > 0)
+        lightUpBreath-= breathSpeed;
+      else
+        lightUpBreathDirection = true;
+     }
+
+     
+    }else if(lightUpBreath != 0) lightUpBreath = 0; // Reset if not needed
+     
+
+        int newLight = lightUpCurrent / 5 - lightUpBreath / 100;
+        
+        if(newLight <= 0 && resultBits == noTouchBits && gameplayLightUp == 0x02){ // Fix timing to breath on touch
+      lightUpBreathDirection = false;
+      lightUpBreath = 0;
+     }
     
        bool lightUp = true;
        bool first = true;
-        for (CRGB &led : leds){
-          if(lightUp){
-            if(!first)
-              led = CRGB(lightUpCurrent/5, lightUpCurrent/5, lightUpCurrent/5);
-            else
-              led = CRGB::Black; // Except for the first one
+      
+        for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
+          if(newLight < 0) newLight = 0;
 
+          
+          if(halfLedsMode){
+            if(lightUp){
+            if(!first){
+              
+              leds[i] = CRGB(newLight, newLight, newLight);   
+            }
+              
+            else
+              leds[i] = CRGB::Black; // Except for the first one
+            
+            
             if(first) first = false;
             lightUp = false;
             }
           else{
-            led = CRGB::Black;
+            leds[i] = CRGB::Black;
             lightUp = true;
             }
+          }else
+            leds[i] = CRGB(newLight + colorNoTouch.r, newLight + colorNoTouch.g, newLight + colorNoTouch.b); 
+            
+            
+            
+          if(sensors[i]){ // Lightup the touched sensor
+            leds[i] = colorTouch;
+            lightUpTouchedTrail[i] = 75;  // Max Brightness to start with for trail effect
+          } 
+          else if(lightUpTouchedTrail[i] > 0 && gameplayLightUp == 0x02){  // Only for FULL ARCADE - Trail effect: Transition light when not touched anymore
+            lightUpTouchedTrail[i] -= 1;  // Transition speed
+            if(lightUpTouchedTrail[i] < 0) lightUpTouchedTrail[i] = 0;
+            
+            // Turquoise transition start...
+            int R = (lightUpTouchedTrail[i] - colorTrail.r/*65*/);
+            int G = (lightUpTouchedTrail[i] - colorTrail.g/*49*/);
+            int B = (lightUpTouchedTrail[i] - colorTrail.b/*51*/);
+            if(R < 0) R = 0;
+            if(G < 0) G = 0;
+            if(B < 0) B = 0;
+
+            // output result
+            leds[i] = leds[i] + CRGB(R,G,B);
+          }
+
         }
-        
-        for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){  // Lightup the touched sensor
-          if(sensors[i]) leds[i] = CRGB::White;
-
-          // WAVE
-          /*bool wave = true;
-          if(lightWave < 5000 && wave == true){
-            lightWave++;
-            if(lightWave >= 5000) wave = false;
-          }
-          else if(lightWave > 0 && wave == false){
-            lightWave--;
-            if(lightWave <= 0 && sensors[i]) wave = true;
-          }
-
-          for(int i2 = lightWave/1000; i2 > 0; i2--){
-            if(sensors[i]){
-              int left = i-i2;
-              int right = i+i2;
-              if(right <= NUM_LEDS_PER_STRIP-1 && !sensors[i+i2] && leds[i+i2] < leds[i]/90 && (i+i2 != 1 && i+i2 != 3 && i+i2 != 5 && i+i2 != 7 && i+i2 != 9 && i+i2 != 11 && i+i2 != 13 && i+i2 != 15 && i+i2 != 17 && i+i2 != 19 &&i+i2 != 21 && i+i2 != 23 && i+i2 != 25 && i+i2 != 27 && i+i2 != 29 && i+i2 != 31))
-                leds[i+i2] = leds[i]/90;
-              if(left >= 0  && !sensors[i-i2] && leds[i-i2] < leds[i]/90 && (i-i2 != 1 && i-i2 != 3 && i-i2 != 5 && i-i2 != 7 && i-i2 != 9 && i-i2 != 11 && i-i2 != 13 && i-i2 != 15 && i-i2 != 17 && i-i2 != 19 &&i-i2 != 21 && i-i2 != 23 && i-i2 != 25 && i-i2 != 27 && i-i2 != 29 && i-i2 != 31))
-                leds[i-i2] = leds[i]/90;
-            }
-          }*/
-          
-          
-          
-          }
 
       
     }
-    else{
-      if(gameplayLightUp == 0x02){ // Arcade Lights Mode
-        // Adjust timer and RGB values for LEDs
-    if(lightUpTimer < 25) lightUpTimer++;
-    if(lightUpCurrent > 0) lightUpCurrent--;
-       bool lightUp = true;
-       bool first = true;
-        for (CRGB &led : leds){
-          if(lightUp && lightUpTimer >= 25){
-            if(!first)
-              led = CRGB(lightUpCurrent/5, lightUpCurrent/5, lightUpCurrent/5);
-            else
-              led = CRGB::Black; // Except for the first one
+    else{ // HORI
 
-            if(first) first = false;
-            lightUp = false;
-            }
-          else{
-            led = CRGB::Black;
-            lightUp = true;
-            }
-        }
-      }
-      else{
         for (CRGB &led : leds){
         led = CRGB::Black;
         }
-      }
+
     
     for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){  // Lightup the touched sensor
       if(sensors[i]){
-        leds[i] = CRGB::White;
-        
+        leds[i] = colorTouch;
+
         if(lightUpCurrent != 0 && gameplayLightUp == 0x01) lightUpCurrent = 0;
         if(lightUpTimer != 25 && gameplayLightUp == 0x01) lightUpTimer = 25;
+
         }
+        
       }
     }
   }
@@ -1096,6 +1175,14 @@ void sliderNavigation(){
     else {buttonStatus[BUTTONLEFT] = false;}
     if (sensors[21] || sensors[22] || sensors[23]) {buttonStatus[BUTTONRIGHT] = true;}
     else {buttonStatus[BUTTONRIGHT] = false;}
+    /*if (sensors[7] || sensors[8] || sensors[9]) {buttonStatus[BUTTONX] = true;}
+    else {buttonStatus[BUTTONX] = false;}
+    if (sensors[11] || sensors[12] || sensors[13]) {buttonStatus[BUTTONY] = true;}
+    else {buttonStatus[BUTTONY] = false;}
+    if (sensors[17] || sensors[18] || sensors[19]) {buttonStatus[BUTTONB] = true;}
+    else {buttonStatus[BUTTONB] = false;}
+    if (sensors[21] || sensors[22] || sensors[23]) {buttonStatus[BUTTONA] = true;}
+    else {buttonStatus[BUTTONA] = false;}*/
   
     // Apply LEDS colors...
     if(buttonStatus[BUTTONLB]) colorL1Btn = colorPushed;
@@ -1253,14 +1340,14 @@ else if(pushedSettings5){
       pushedSettings8 = true;
     }
   else if(pushedSettings8){
-    EEPROM.write(10, EEPROM.read(0));
-    EEPROM.write(11, EEPROM.read(1));
-    EEPROM.write(12, EEPROM.read(2));
-    EEPROM.write(13, EEPROM.read(3));
-    EEPROM.write(14, EEPROM.read(4));
-    EEPROM.write(15, EEPROM.read(5));
-    EEPROM.write(16, EEPROM.read(6));
-    EEPROM.write(17, EEPROM.read(7));
+    EEPROM.update(10, EEPROM.read(0));
+    EEPROM.update(11, EEPROM.read(1));
+    EEPROM.update(12, EEPROM.read(2));
+    EEPROM.update(13, EEPROM.read(3));
+    EEPROM.update(14, EEPROM.read(4));
+    EEPROM.update(15, EEPROM.read(5));
+    EEPROM.update(16, EEPROM.read(6));
+    EEPROM.update(17, EEPROM.read(7));
     settingsLoader();
     pushedSettings8 = false;
     } 
@@ -1271,14 +1358,14 @@ else if(pushedSettings5){
       pushedSettings9 = true;
     }
   else if(pushedSettings9){
-    EEPROM.write(0, EEPROM.read(10));
-    EEPROM.write(1, EEPROM.read(11));
-    EEPROM.write(2, EEPROM.read(12));
-    EEPROM.write(3, EEPROM.read(13));
-    EEPROM.write(4, EEPROM.read(14));
-    EEPROM.write(5, EEPROM.read(15));
-    EEPROM.write(6, EEPROM.read(16));
-    EEPROM.write(7, EEPROM.read(17));
+    EEPROM.update(0, EEPROM.read(10));
+    EEPROM.update(1, EEPROM.read(11));
+    EEPROM.update(2, EEPROM.read(12));
+    EEPROM.update(3, EEPROM.read(13));
+    EEPROM.update(4, EEPROM.read(14));
+    EEPROM.update(5, EEPROM.read(15));
+    EEPROM.update(6, EEPROM.read(16));
+    EEPROM.update(7, EEPROM.read(17));
     settingsLoader();
     FastLED.setBrightness(LEDBrightnessLoad());
     pushedSettings9 = false;
@@ -1407,12 +1494,12 @@ for (CRGB &led : leds){
   }
   switch(EEPROM.read(7)){ // Nav Shortcut
     case 0x00:
-    leds[27] = leds[28] = CRGB::Red;
-    break;
-    case 0x01:
     leds[27] = leds[28] = CRGB::Green;
     break;
-    default: leds[27] = leds[27] = CRGB::Red;
+    case 0x01:
+    leds[27] = leds[28] = CRGB::Red;
+    break;
+    default: leds[27] = leds[28] = CRGB::Red;
   }
 
 }
@@ -1424,7 +1511,7 @@ void updateSettings(int index, byte _size){
       temp++;
     else
       temp = 0x00;
-    EEPROM.write(index, temp);
+    EEPROM.update(index, temp);
   }
 
 void buttonRead(){
@@ -1516,18 +1603,25 @@ void buttonProcessing(){
     if (buttonStatus[BUTTONSELECT]){ReportData.Button |= START_MASK_ON;}
     if (buttonStatus[SWITCHMODEPIN]){ReportData.Button |= HOME_MASK_ON;}
     // Need more buttons...
-
-    if (sensors[0] || sensors[1] || sensors[2]){ReportData.Button |= L3_MASK_ON;}
-    if (sensors[31] || sensors[30] || sensors[29]){ReportData.Button |= R3_MASK_ON;}
-    if (sensors[12] || sensors[13] || sensors[14] || sensors[15] || sensors[16] || sensors[17] || sensors[18] || sensors[19] || sensors[20]){ReportData.Button |= SELECT_MASK_ON;}
-
+    
     // LEDS output
-    for (CRGB &led : leds){
+    if(calibrated){
+      for (CRGB &led : leds){
       led = CRGB::Black;
     }
+      }
     leds[0] = leds[1] = leds[2] = CRGB::Cyan;
     leds[31] = leds[30] = leds[29] = CRGB::Cyan;
     leds[12] = leds[13] = leds[14] = leds[15] = leds[16] = leds[17] = leds[18] = leds[19] = leds[20] = CRGB::Cyan;
+
+    if (sensors[0] || sensors[1] || sensors[2]){ReportData.Button |= L3_MASK_ON; leds[0] = leds[1] = leds[2] = CRGB::White;}
+    if (sensors[31] || sensors[30] || sensors[29]){ReportData.Button |= R3_MASK_ON; leds[31] = leds[30] = leds[29] = CRGB::White;}
+    if (sensors[12] || sensors[13] || sensors[14] || sensors[15] || sensors[16] || sensors[17] || sensors[18] || sensors[19] || sensors[20])
+      {ReportData.Button |= SELECT_MASK_ON; leds[12] = leds[13] = leds[14] = leds[15] = leds[16] = leds[17] = leds[18] = leds[19] = leds[20] = CRGB::White;}
+
+    
+    
+    
     
   }
   
@@ -1552,3 +1646,110 @@ void resetButtons(){
   buttonStatus[BUTTONLEFT] = false;
   buttonStatus[BUTTONRIGHT] = false;
 }
+
+void colorTest(){
+  
+}
+
+extern "C"{
+  byte ReadEEPROM(int i){ 
+    return EEPROM.read(i);
+    }
+
+  void WriteEEPROM(int i, byte value){
+    EEPROM.update(i, value);
+  }
+
+  void PDAC_PC_RELOAD(){ // Reload settings
+    settingsLoader();
+    FastLED.setBrightness(LEDBrightnessLoad());
+  }
+
+  void PDAC_PC_CALIBRATE(){ // Calibrate slider with new settings
+    calibrateSensors();
+      processButtons();
+  }
+
+
+  void PDAC_PC_COLORTEST_CHANGECOLOR(int r, int g, int b){
+    sliderModeChange = COLORTEST;
+    sliderMode = COLORTEST;
+    for (CRGB &led : leds){
+      led = CRGB(r,g, b);
+    }
+    
+  }
+
+  void PDAC_PC_TRAILTEST_RESETLINE(){
+    globalCounter = 0;
+    globalBool = false;
+  }
+
+  void PDAC_PC_TRAILTEST_CHANGECOLOR(int r, int g, int b){
+    sliderModeChange = COLORTEST;
+    sliderMode = COLORTEST;
+    colorTrail = CRGB(r,g,b);
+    for (CRGB &led : leds){
+      led = CRGB::Black;
+    }
+
+    sensors[globalCounter] = true;
+    
+     for(int i = 0; i < NUM_LEDS_PER_STRIP; i++){
+      if(sensors[i]){ // Lightup the touched sensor
+            leds[i] = colorTouch;
+            lightUpTouchedTrail[i] = 75;  // Max Brightness to start with for trail effect
+          } 
+          else if(lightUpTouchedTrail[i] > 0 && gameplayLightUp == 0x02){  // Only for FULL ARCADE - Trail effect: Transition light when not touched anymore
+            lightUpTouchedTrail[i] -= 1;  // Transition speed
+            if(lightUpTouchedTrail[i] < 0) lightUpTouchedTrail[i] = 0;
+            
+            // Turquoise transition start...
+            int R = (lightUpTouchedTrail[i] - colorTrail.r);
+            int G = (lightUpTouchedTrail[i] - colorTrail.g);
+            int B = (lightUpTouchedTrail[i] - colorTrail.b);
+            if(R < 0) R = 0;
+            if(G < 0) G = 0;
+            if(B < 0) B = 0;
+
+            // output result
+            leds[i] = leds[i] + CRGB(R,G,B);
+          }
+     }
+     
+    sensors[globalCounter] = false;
+    if(globalCounter == 0)
+      globalBool = false;
+    else if(globalCounter == 32)
+      globalBool = true;  
+      
+    if(!globalBool)
+      globalCounter++;
+    else
+      globalCounter--;
+
+    
+    
+  }
+
+  void PDAC_PC_NOTOUCHCOLORTEST(int r, int g, int b){
+    sliderModeChange = GAMEPLAY;
+    sliderMode = GAMEPLAY;
+    colorNoTouch = CRGB(r,g,b);
+  }
+
+  void PDAC_PC_TOUCHCOLORTEST(int r, int g, int b){
+    colorTouch = CRGB(r,g,b);
+    if(sliderMode == COLORTEST){
+      leds[31] = colorTouch;
+    }
+  }
+
+  void PDAC_PC_SERVICE(){ // Put the controller in service mode
+    PDM_PC = true;
+  }
+    
+  }
+  
+    
+ 
