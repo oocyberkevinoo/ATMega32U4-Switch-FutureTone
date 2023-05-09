@@ -1,8 +1,10 @@
 ## Project Diva Controller (Switch)
 
 ### PDAC Manager released!
-This PC manager will help you to adjust settings easily, and let you store on your PC different configurations so you can try different things without losing a specific setup.
+This PC manager will help you to adjust settings easily, and let you store on your PC different configurations so you can try different things without losing a specific setup. 
+
 [PDAC Manager link](PDAC%20Manager/Release)
+
 A HUGE thanks to [CrazyRedMachine](https://github.com/CrazyRedMachine) that helped me A LOT on the USB Protocol to communicate with the controller easier.
 
 (A LOT OF NEW TIPS AND HELP INFORMATIONS HAVE BEEN ADDED, PLEASE CHECK "HELP.TXT"
