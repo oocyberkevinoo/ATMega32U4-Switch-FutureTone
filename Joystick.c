@@ -47,8 +47,8 @@ if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | R
 {
   if (USB_ControlRequest.bRequest == HID_REQ_GetReport)
   {
-      uint8_t feature_data[4] = {USB_ControlRequest.wValue & 0xFF};
-      uint8_t feature_data_size = 5;
+      uint8_t feature_data[35] = {USB_ControlRequest.wValue & 0xFF};
+      uint8_t feature_data_size = 36;
 
       feature_data[1] = 0;
       feature_data[2] = 0;
@@ -103,6 +103,24 @@ if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | R
             case PDM_PC_TouchColorTest:
             PDAC_PC_TOUCHCOLORTEST(value1, value2, value3);
             PDAC_PC_TRAILTEST_RESETLINE();
+            break;
+
+            case PDM_PC_SensorsDebug:
+            feature_data[1] = command;
+            byte * result;
+            
+            for(int i = 1; i <= 32; i++){
+              feature_data[i+1] = PDAC_PC_SENSORSDEBUG_DATA(i);
+            }
+            //feature_data[2] = PDAC_PC_SENSORSDEBUG_DATA(value1);
+            //feature_data[3] = PDAC_PC_SENSORSDEBUG_BASELINE(value1);
+            
+            break;
+
+            case PDM_PC_Debug:
+            feature_data[1] = command;
+            feature_data[2] = PDAC_PC_DEBUG(0);
+            feature_data[3] = PDAC_PC_DEBUG(2);
             break;
             
             default:

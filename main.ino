@@ -1,3 +1,6 @@
+// DIVA CONTROLLER by CyberKevin
+// Firmware version: v514 - 02/09/2023
+
 #include <QuickMpr121.h>
 #include <FastLED.h>
 #include "LUFAConfig.h"
@@ -5,7 +8,9 @@
 #include "Joystick.h"
 #include <Bounce2.h>
 #include <EEPROM.h>
-//#include "Settings.h"
+#include "ButtonsMapping.h"
+#include "Settings.h"
+#include "SDVX.h"
 
 #define BOUNCE_WITH_PROMPT_DETECTION
 #define MILLIDEBOUNCE 1 //Debounce time in milliseconds
@@ -21,50 +26,6 @@ bool globalBool = false;
 byte buttonStatus[17] = {0};
 int buttonSwitchModeTimer = 1000;
 
-// DEFINE buttons addresses
-#define CAPTURE_MASK_ON 0x2000
-#define R3_MASK_ON 0x800
-#define L3_MASK_ON 0x400
-#define DPAD_UP_MASK_ON 0x00
-#define DPAD_UPRIGHT_MASK_ON 0x01
-#define DPAD_RIGHT_MASK_ON 0x02
-#define DPAD_DOWNRIGHT_MASK_ON 0x03
-#define DPAD_DOWN_MASK_ON 0x04
-#define DPAD_DOWNLEFT_MASK_ON 0x05
-#define DPAD_LEFT_MASK_ON 0x06
-#define DPAD_UPLEFT_MASK_ON 0x07
-#define DPAD_NOTHING_MASK_ON 0x08
-#define A_MASK_ON 0x04
-#define B_MASK_ON 0x02
-#define X_MASK_ON 0x08
-#define Y_MASK_ON 0x01
-#define LB_MASK_ON 0x10
-#define RB_MASK_ON 0x20
-#define ZL_MASK_ON 0x40
-#define ZR_MASK_ON 0x80
-#define START_MASK_ON 0x200
-#define SELECT_MASK_ON 0x100
-#define HOME_MASK_ON 0x1000
-// #define PS4_TOUCHPAD_MASK_ON 0x???
-
-// DEFINE buttons index
-#define BUTTONUP 0
-#define BUTTONDOWN 1
-#define BUTTONLEFT 2
-#define BUTTONRIGHT 3
-#define BUTTONA 4
-#define BUTTONB 5
-#define BUTTONX 7
-#define BUTTONY 6
-#define BUTTONLB 8
-#define BUTTONRB 9
-#define BUTTONLT 10
-#define BUTTONRT 11
-#define BUTTONSTART 12
-#define BUTTONSELECT 13
-#define BUTTONHOME 14
-#define SWITCHMODEPIN 15
-#define NAVMODEPIN 16
 
 // Is it in PS4 mode (Not available for now, should use a converter for PS4 for now, that ensure correct analog datas... See my git ReadMe for more informations)
 bool PS4 = false;
@@ -75,12 +36,6 @@ bool NAV = false;
 // Slider gameplay enabled ?
 bool sliderGameplayEnabled = true;
 
-// DEFINE Slider
-#define NUM_MPRS 3                // Number of MPRs
-#define PROXIMITY_ENABLE false    // Proximity check (not needed)
-#define MPR_THRESHOLD_TOUCH 12    // Default Touch Sensitivity (default 15 - 10) (Optimised 10 - 9)  (perfect 9, 6)
-#define MPR_THRESHOLD_RELEASE 10  // Default Release Sensitivity (2~4 behind the touch one)
-
 // Initialise arrays for sensors...
 short sensors[NUM_MPRS*12];             
 short sensorsConfirmed[NUM_MPRS*12];
@@ -88,6 +43,22 @@ short sensorsConfirmed2[NUM_MPRS*12];
 bool sensorsTouched[NUM_MPRS*12];
 bool sensorTouched;
 bool sensorsDisabled[NUM_MPRS*12];
+int sensorsFiltered[10][4]=
+    {
+      {255, 255, 255, 255},
+      {255, 255, 255, 255},
+      {255, 255, 255, 255},
+      {255, 255, 255, 255},
+      {255, 255, 255, 255},
+      {255, 255, 255, 255},
+      {255, 255, 255, 255},
+      {255, 255, 255, 255},
+      {255, 255, 255, 255},
+      {255, 255, 255, 255}
+    };
+int sensorsPausedCyclesInit = 0;
+int sensorsPausedCycles = 0;
+int touchedSensors = 0; // How many sensors confirmed to be touched ?
 
 // create the mpr121 instances
 // these will have addresses set automatically
@@ -110,7 +81,8 @@ typedef enum {
   TRIGGER,
   CALIBRATE,
   PPD,
-  COLORTEST
+  COLORTEST,
+  SDVX
 } SliderMode;
 SliderMode sliderMode = GAMEPLAY;       // Default mode is GAMEPLAY
 SliderMode sliderModeChange = GAMEPLAY; // Transition mode, change it to change mode on button release correctly
@@ -166,15 +138,10 @@ short sensor32 = 0;
 
 
 // LEDs
-#define NUM_LEDS_PER_STRIP 32
-#define LED_TYPE WS2812B
-#define LED_DATA_PIN 21
-#define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS_PER_STRIP];
-//bool idleLeds = true;
-CRGB colorNoTouch = CRGB::Black;
-CRGB colorTouch = CRGB::White;
-CRGB colorTrail = CRGB(65, 49, 51);
+CRGB colorNoTouch = CRGB(LEDS_COLOR_NOTOUCH[0],LEDS_COLOR_NOTOUCH[1],LEDS_COLOR_NOTOUCH[2]);
+CRGB colorTouch = CRGB(LEDS_COLOR_TOUCH[0],LEDS_COLOR_TOUCH[1],LEDS_COLOR_TOUCH[2]);
+CRGB colorTrail = CRGB(LEDS_COLOR_TRAIL[0],LEDS_COLOR_TRAIL[1],LEDS_COLOR_TRAIL[2] );
 
 // PC Test Color
 int testR = 255;
@@ -210,24 +177,24 @@ State_t state = DIGITAL;
 void setupPins(){
   //  You'll not have enough pins on a Pro Micro, please change the pins to the correspondig one.
   //  You can use Navgation mode of the Slider to have virtual buttons.
-    joystickUP.attach(255,INPUT_PULLUP);    // Unused
-    joystickDOWN.attach(255,INPUT_PULLUP);  // Unsued
-    joystickLEFT.attach(1,INPUT_PULLUP);
-    joystickRIGHT.attach(0,INPUT_PULLUP);
-    buttonA.attach(4,INPUT_PULLUP);
-    buttonB.attach(5,INPUT_PULLUP);
-    buttonX.attach(7,INPUT_PULLUP);
-    buttonY.attach(6,INPUT_PULLUP);
-    buttonLB.attach(9,INPUT_PULLUP);
-    buttonRB.attach(8,INPUT_PULLUP);
-    buttonLT.attach(16,INPUT_PULLUP);
-    buttonRT.attach(10,INPUT_PULLUP);
-    buttonSTART.attach(15,INPUT_PULLUP);
-    buttonSELECT.attach(14,INPUT_PULLUP);
-    //buttonHOME.attach(18,INPUT_PULLUP);
+    joystickUP.attach(PIN_UP,INPUT_PULLUP);    // Unused
+    joystickDOWN.attach(PIN_DOWN,INPUT_PULLUP);  // Unsued
+    joystickLEFT.attach(PIN_LEFT,INPUT_PULLUP);
+    joystickRIGHT.attach(PIN_RIGHT,INPUT_PULLUP);
+    buttonA.attach(PIN_A,INPUT_PULLUP);
+    buttonB.attach(PIN_B,INPUT_PULLUP);
+    buttonX.attach(PIN_X,INPUT_PULLUP);
+    buttonY.attach(PIN_Y,INPUT_PULLUP);
+    buttonLB.attach(PIN_LB,INPUT_PULLUP);
+    buttonRB.attach(PIN_RB,INPUT_PULLUP);
+    buttonLT.attach(PIN_LT,INPUT_PULLUP);
+    buttonRT.attach(PIN_RT,INPUT_PULLUP);
+    buttonSTART.attach(PIN_START,INPUT_PULLUP);
+    buttonSELECT.attach(PIN_SELECT,INPUT_PULLUP);
+    //buttonHOME.attach(PIN_HOME,INPUT_PULLUP);
     
-    switchModePin.attach(19, INPUT_PULLUP);
-    navModePin.attach(18, INPUT_PULLUP);
+    switchModePin.attach(PIN_SWITCHMODE, INPUT_PULLUP);
+    navModePin.attach(PIN_NAVMODE, INPUT_PULLUP);
   
     joystickUP.interval(MILLIDEBOUNCE);
     joystickDOWN.interval(MILLIDEBOUNCE);
@@ -258,6 +225,9 @@ void sensorsInitialization(){
     for (int i = 0; i < NUM_MPRS; i++) {
     // this special line makes `mpr` the same as typing `mprs[i]`
     mpr121 &mpr = mprs[i];
+    //mpr.debounceTouch = 3;
+    //mpr.debounceRelease = 2;
+
 
     
     // `mpr.begin()` sets up the Wire library
@@ -305,14 +275,14 @@ void sensorsInitialization(){
 void ledsInitialization(){
   FastLED.addLeds<LED_TYPE, LED_DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS_PER_STRIP);
   FastLED.setBrightness(LEDBrightnessLoad());
-  FastLED.setMaxPowerInVoltsAndMilliamps(5, 230);
+  FastLED.setMaxPowerInVoltsAndMilliamps(LEDS_MAXVOLTS, LEDS_MAXMILLIAMPS);
   }
 
 void settingsLoader(){ // Load settings from EEPROM that need fast load
-  sliderFilter1 = EEPROM.read(2);
-  sliderFilter2 = EEPROM.read(3);
-  gameplayLightUp = EEPROM.read(5);
-  halfLedsMode = EEPROM.read(8);
+  sliderFilter1 = EEPROM.read(SETTING_ADD_MPRFILTER);
+  sliderFilter2 = EEPROM.read(SETTING_ADD_CUSTOMFILTER);
+  gameplayLightUp = EEPROM.read(SETTING_ADD_LEDSMODE);
+  halfLedsMode = EEPROM.read(SETTING_ADD_HALFLEDS);
   }
   
 
@@ -325,7 +295,7 @@ void setup() {
   SetupHardware();              // Setup Hardware...
   GlobalInterruptEnable();
 
-  
+  sensorsPausedCycles = sensorsPausedCyclesInit; // Lowering slider speed for performances when not touching
 }
 
 // Arduino Loop process...
@@ -390,6 +360,10 @@ void loop() {
       break;
       case COLORTEST: // Color Test Though PC
       colorTest();
+      break;
+      case SDVX: // SDVX custom mode
+      sliderGameplay();
+      processButtons();
       break;
     }
 
@@ -458,139 +432,28 @@ void calibrateSensors(){
  */
 
 int LEDBrightnessLoad(){  // LEDs brightness level
-  switch(EEPROM.read(0))
-    {
-    case 0x00:
-    return 255;
-    break;
-    case 0x01:
-    return 200;
-    break;
-    case 0x02:
-    return 155;
-    break;
-    case 0x03:
-    return 100;
-    break;
-    case 0x04:
-    return 50;
-    break;
-    case 0x05:
-    return 25;
-    break;
-    case 0x06:
-    return 10;
-    break;
-    default:
-    return 255;
-    
-    }
-  }
+  return SettingsLEDBrightnessLoad(EEPROM.read(SETTING_ADD_LEDSBRIGHTNESS));
+}
 
 int SensitivityLoad(){  // Sensitivity of sensors
-  switch(EEPROM.read(1)){
-    case 0x00:
-    return 13;
-    break;
-    case 0x01:
-    return 11;
-    break;
-    case 0x02:
-    return 10;
-    break;
-    case 0x03:
-    return 9;
-    break;
-    case 0x04:
-    return 8;
-    break;
-    case 0x05:
-    return 7;
-    break;
-    case 0x06:
-    return 6;
-    break;
-    case 0x07:
-    return 5;
-    break;
-    case 0x08:
-    return 4;
-    break;
-    default:
-    return 8;
-    }
-  }
-
-  int ReleaseThresholdOffsetLoad(){ // Offset Release
-    switch(EEPROM.read(4)){
-      case 0x00:
-      return 4;
-      break;
-      case 0x01:
-      return 3;
-      break;
-      case 0x02:
-      return 2;
-      break;
-      case 0x03:
-      return 1;
-      break;
-      case 0x04:
-      return 0;
-      break;
-      case 0x05:
-      return 5;
-      break;
-      case 0x06:
-      return 6;
-      break;
-      default:
-      return 2;
-      }
-    }
-
-    int CalibrationStrength(){ // Calibration Strength
-    switch(EEPROM.read(6)){
-      case 0x00:
-      return 26;
-      break;
-      case 0x01:
-      return 30;
-      break;
-      case 0x02:
-      return 32;
-      break;
-      case 0x03:
-      return 1;
-      break;
-      case 0x04:
-      return 12;
-      break;
-      break;
-      default:
-      return 26;
-      }
-    }
-
-    bool NAVShortcut(){
-switch(EEPROM.read(7)){
-  case 0x00:
-  return true;
-  break;
-  default:
-  return false;
-}
+  return SettingsSensitivityLoad(EEPROM.read(SETTING_ADD_SENSITIVITY));
 }
 
-  bool HalfLedsMode(){
-    switch(EEPROM.read(8)){
-      case 0x01:
-      return true;
-      break;
-      default:
-      return false;
-    }
-  }
+int ReleaseThresholdOffsetLoad(){ // Offset Release
+  return SettingsReleaseThresholdOffsetLoad(EEPROM.read(SETTING_ADD_RELEASE));
+}
+
+int CalibrationStrength(){ // Calibration Strength
+  return SettingsCalibrationStrength(EEPROM.read(SETTING_ADD_CALIBRATION));
+}
+
+bool NAVShortcut(){
+  return SettingsNAVShortcut(EEPROM.read(SETTING_ADD_NAVIGATION));
+}
+
+bool HalfLedsMode(){
+  return SettingsHalfLedsMode(EEPROM.read(SETTING_ADD_HALFLEDS));
+}
 
 
 
@@ -601,18 +464,32 @@ switch(EEPROM.read(7)){
 
 // Manage the output of the Slider sensors
 void checkSensors(){
+
+  /*if(sensorsPausedCycles > 0 && touchedSensors <= 0) {
+    sensorsPausedCycles--;
+    return;
+  }
+  else if((sensorsPausedCycles > 0 && touchedSensors > 0 || sensorsPausedCycles <= 0 && touchedSensors <= 0) && sensorsPausedCycles != sensorsPausedCyclesInit) 
+    sensorsPausedCycles = sensorsPausedCyclesInit;*/
+  
   int numElectrodes = 12; // How many electrodes/sensors by MPR121 ?
   int sensorCount = 0;    // What sensor are we actually working on ?
-  int touchedSensors = 0; // How many sensors confirmed to be touched ?
+  touchedSensors = 0; // How many sensors confirmed to be touched ?
+
+  if(sliderMode == SDVX){
+    SDVX_Touched[0] = false;
+    SDVX_Touched[1] = false;
+  }
+  if(!calibrated){
+    calibratedCountNeeded = CalibrationStrength();
+    calibratedCount = 0;
+  }
+    
   
   for (int i = 0; i < NUM_MPRS; i++) { // Checking each MPR...
     mpr121 &mpr = mprs[i];
     for (int j = 0; j < numElectrodes; j++) { // Checking each sensor...
       short touching = mpr.readTouchState(j); // Is it touched ?...
-
-      /*if(i == 2 && j == 7)
-      sensor32 = touching;*/
-
       
       if(sensorsDisabled[sensorCount] || (!sliderGameplayEnabled && sliderMode == GAMEPLAY)){ // Is it disabled ?
         if(sliderGameplayEnabled && (sensors[sensorCount-1] || sensors[sensorCount+1])) // Is near sensors is touched ?
@@ -648,6 +525,11 @@ void checkSensors(){
             sensors[sensorCount] = touching;
             sensorsConfirmed[sensorCount] = touching;
             }
+
+
+            // New filtering technic
+            //if(sensorsFiltered[][]
+            
         break;
         case 0x02:    // Filter Level 0: No Check... (No latency, stability depend only on sensitivity and MPR filters...)
           sensors[sensorCount] = touching;
@@ -655,61 +537,47 @@ void checkSensors(){
           
         }
 
-        // How many sensors touched ? (not used)
-      /*if(touching)
-        touchedSensors++;
-      else if(touchedSensors > 0)
-        touchedSensors--;*/
+        // How many sensors touched ? Unused
+      /*if(sensors[sensorCount])
+        touchedSensors++;*/
+
+        if(!calibrated){
+          short value = mpr.readElectrodeData(i); 
+          byte baseline = mpr.readElectrodeBaseline(i);
+          value -= ((short)baseline << 2);
+          if(value > 0 && value < 10) 
+            calibratedCount++;
+        }
+
 
 
       // Next sensor...
       sensorCount++;
     }
-    // CALIBRATION PROCESS IF ASKED OR NEEDED ON BOOT... (calibration results based on the first sensor...)
-    if(!calibrated){
-      /*
-      short value = mpr.readElectrodeData(0); 
-      byte baseline = mpr.readElectrodeBaseline(0);
-      value -= ((short)baseline << 2);
-      if(value > 0 && value < 5) 
-        calibrated = true;*/
-
-        calibratedCountNeeded = CalibrationStrength();
-        
-        for(i=0; i < NUM_MPRS * 12; i++){
-          short value = mpr.readElectrodeData(i); 
-          byte baseline = mpr.readElectrodeBaseline(i);
-          value -= ((short)baseline << 2);
-          if(value > 0 && value < 5) 
-            calibratedCount++;
-        }
-
-        if(calibratedCount >= calibratedCountNeeded)
-          calibrated = true;
-        else
-          calibratedCount = 0;
-
-        
-        
-      }
       
   }
+  // CALIBRATION PROCESS IF ASKED OR NEEDED ON BOOT... 
+    if(!calibrated){
+        if(calibratedCount >= calibratedCountNeeded){
+          calibrated = true;
+        }
+          
+        else
+          calibratedCount = 0;
+       
+      }
 
-  // Check if at least one sensor is touched (not used)
-  /*if(touchedSensors > 0){
-    sensorTouched = true;
-    }*/
 }
 
 // Is a sensor has been just touched ? (Unused)
-bool sensorJustTouched(int x){
+/*bool sensorJustTouched(int x){
   if(sensors[x] && !sensorsTouched[x])
     {
     sensorsTouched[x] = true;  
     return true;
     }
     return false;
-  }
+  }*/
 
 
 // Slider Menu to change the mode the Slider is currently on.
@@ -748,6 +616,8 @@ void sliderMenu(){
       sliderModeChange = GAMEPLAY;
     else if(buttonStatus[BUTTONX])
       sliderModeChange = TRIGGER;
+      else if(buttonStatus[BUTTONA])
+      sliderModeChange = SDVX;
       
     
   }
@@ -771,7 +641,7 @@ void sliderGameplay(){
 
   int32_t sliderBits = 0;
   noTouchBits = sliderBits ^ 0x80808080;
-  if(sliderMode != CHUNITHM && !navigationShortcut){
+  if((sliderMode != CHUNITHM && sliderMode != SDVX) && !navigationShortcut){
     for (bool sensor : sensors)
   {
     if(bit_count >= 0){
@@ -995,6 +865,84 @@ void sliderGameplay(){
         if(leds[i-1]) leds[i-1] = CRGB::Purple;
         }
       }
+    }
+  }else if(sliderMode == SDVX){ // Slider in SDVX Custom Mode
+    // GAMEPLAY
+    SDVX_sensorCount = 0;
+    SDVX_touchedSensors[0] = 0;
+    SDVX_touchedSensors[1] = 0;
+    for (bool sensor : sensors){
+      // SDVX module
+          if( SDVX_sensorCount < 16 ){    // First half test for Left Pot
+            SDVX_Gameplay(sensor, true);
+          }
+          else{                           // Second half test for Right Pot
+            SDVX_Gameplay(sensor, false);
+          }
+          SDVX_sensorCount++;
+    }
+
+    SDVX_CheckTouchedSlide();
+      
+      // Apply result...
+          if(SDVX_POTS[0]) buttonStatus[BUTTONLT] = true; else buttonStatus[BUTTONLT] = false;
+          if(SDVX_POTS[1]) buttonStatus[BUTTONLB] = true; else buttonStatus[BUTTONLB] = false;
+          if(SDVX_POTS[2]) buttonStatus[BUTTONRB] = true; else buttonStatus[BUTTONRB] = false;
+          if(SDVX_POTS[3]) buttonStatus[BUTTONRT] = true; else buttonStatus[BUTTONRT] = false;
+    
+    // KEYS SDVX
+    /*if(sensors[0] || sensors[1] || sensors[2] || sensors[3]) buttonStatus[BUTTONLT] = true; else buttonStatus[BUTTONLT] = false;
+    if(sensors[4] || sensors[5] || sensors[6] || sensors[7]) buttonStatus[BUTTONLB] = true; else buttonStatus[BUTTONLB] = false;
+    //if(sensors[8] || sensors[9] || sensors[10] || sensors[11]) buttonStatus[BUTTONX] = true; else buttonStatus[BUTTONX] = false;
+    //if(sensors[12] || sensors[13] || sensors[14] || sensors[15]) buttonStatus[BUTTONY] = true; else buttonStatus[BUTTONY] = false;
+    //if(sensors[16] || sensors[17] || sensors[18] || sensors[19]) buttonStatus[BUTTONRB] = true; else buttonStatus[BUTTONRB] = false;
+    //if(sensors[20] || sensors[21] || sensors[22] || sensors[23]) buttonStatus[BUTTONLB] = true; else buttonStatus[BUTTONLB] = false;
+    if(sensors[24] || sensors[25] || sensors[26] || sensors[27]) buttonStatus[BUTTONRB] = true; else buttonStatus[BUTTONRB] = false;
+    if(sensors[28] || sensors[29] || sensors[30] || sensors[31]) buttonStatus[BUTTONRT] = true; else buttonStatus[BUTTONRT] = false;*/
+    
+    // LEDS SDVX (Yellow lighted up, Purple on 3 LEDs near touching)
+  if(!calibrated){
+    bool lightUp = true;
+      for (CRGB &led : leds){
+        if(lightUp){
+          led = CRGB::Yellow;
+          lightUp = false;
+          }
+          else{
+            led = CRGB::Black;
+            lightUp = true;
+            }
+            //led = CRGB::White;
+        }
+    }else{
+      int ledCounter = 0;
+    for (CRGB &led : leds){
+      if(ledCounter < 16) led = CRGB::Blue;
+      else led = CRGB::Red;
+      ledCounter++;
+    }
+
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 3; j++) {
+        if(SDVX_SENSED[i][j] >= 0) leds[SDVX_SENSED[i][j]] = CRGB::White;
+      }
+    }
+    
+    /*if(SDVX_SENSED_L[0] >= 0) leds[SDVX_SENSED_L[0]] = CRGB::White;
+    if(SDVX_SENSED_L[1] >= 0) leds[SDVX_SENSED_L[1]] = CRGB::White;
+    if(SDVX_SENSED_L[2] >= 0) leds[SDVX_SENSED_L[2]] = CRGB::White;
+    if(SDVX_SENSED_R[0] >= 0) leds[SDVX_SENSED_R[0]] = CRGB::White;
+    if(SDVX_SENSED_R[1] >= 0) leds[SDVX_SENSED_R[1]] = CRGB::White;
+    if(SDVX_SENSED_R[2] >= 0) leds[SDVX_SENSED_R[2]] = CRGB::White;*/
+    
+    //leds[0] = leds[1] = leds[2] = CRGB::DarkBlue;
+    //leds[29] = leds[30] = leds[31] = CRGB::DarkBlue;
+    //leds[3] = leds[4] = leds[5] = CRGB::DodgerBlue;
+    //leds[26] = leds[27] = leds[28] = CRGB::DodgerBlue;
+    //leds[8] = leds[9] = leds[10] = colorUpBtn;
+    //leds[12] = leds[13] = leds[14] = colorDownBtn;
+    //leds[17] = leds[18] = leds[19] = colorLeftBtn;
+    //leds[21] = leds[22] = leds[23] = colorRightBtn;
     }
   } else if(sliderMode == PPD){ // Slider in PPD Mode
     // GAMEPLAY
@@ -1340,14 +1288,19 @@ else if(pushedSettings5){
       pushedSettings8 = true;
     }
   else if(pushedSettings8){
-    EEPROM.update(10, EEPROM.read(0));
-    EEPROM.update(11, EEPROM.read(1));
-    EEPROM.update(12, EEPROM.read(2));
-    EEPROM.update(13, EEPROM.read(3));
-    EEPROM.update(14, EEPROM.read(4));
-    EEPROM.update(15, EEPROM.read(5));
-    EEPROM.update(16, EEPROM.read(6));
-    EEPROM.update(17, EEPROM.read(7));
+  for(int i_setting : settings){
+    EEPROM.update(10 + i_setting, EEPROM.read(i_setting));
+  }
+    
+    /*EEPROM.update(10, EEPROM.read(SETTING_ADD_LEDSBRIGHTNESS));
+    EEPROM.update(11, EEPROM.read(SETTING_ADD_SENSITIVITY));
+    EEPROM.update(12, EEPROM.read(SETTING_ADD_MPRFILTER));
+    EEPROM.update(13, EEPROM.read(SETTING_ADD_CUSTOMFILTER));
+    EEPROM.update(14, EEPROM.read(SETTING_ADD_RELEASE));
+    EEPROM.update(15, EEPROM.read(SETTING_ADD_LEDSMODE));
+    EEPROM.update(16, EEPROM.read(SETTING_ADD_CALIBRATION));
+    EEPROM.update(17, EEPROM.read(SETTING_ADD_NAVIGATION));
+    EEPROM.update(18, EEPROM.read(SETTING_ADD_HALFLEDS));*/
     settingsLoader();
     pushedSettings8 = false;
     } 
@@ -1358,14 +1311,17 @@ else if(pushedSettings5){
       pushedSettings9 = true;
     }
   else if(pushedSettings9){
-    EEPROM.update(0, EEPROM.read(10));
+    for(int i_setting : settings){
+      EEPROM.update(i_setting, EEPROM.read(10 + i_setting));
+    }
+    /*EEPROM.update(0, EEPROM.read(10));
     EEPROM.update(1, EEPROM.read(11));
     EEPROM.update(2, EEPROM.read(12));
     EEPROM.update(3, EEPROM.read(13));
     EEPROM.update(4, EEPROM.read(14));
     EEPROM.update(5, EEPROM.read(15));
     EEPROM.update(6, EEPROM.read(16));
-    EEPROM.update(7, EEPROM.read(17));
+    EEPROM.update(7, EEPROM.read(17));*/
     settingsLoader();
     FastLED.setBrightness(LEDBrightnessLoad());
     pushedSettings9 = false;
@@ -1550,6 +1506,11 @@ void processButtons(){
 }
 
 void processDPAD(){
+if(sliderMode == SDVX){
+  ReportData.HAT = DPAD_NOTHING_MASK_ON;
+  return;
+}
+  
   if (!navigationShortcut){
     if ((buttonStatus[BUTTONUP]) && (buttonStatus[BUTTONRIGHT])){ReportData.HAT = DPAD_UPRIGHT_MASK_ON;}
     else if ((buttonStatus[BUTTONDOWN]) && (buttonStatus[BUTTONRIGHT])) {ReportData.HAT = DPAD_DOWNRIGHT_MASK_ON;} 
@@ -1570,14 +1531,18 @@ void processDPAD(){
     else if (buttonStatus[BUTTONLEFT]) {ReportData.HAT = DPAD_UP_MASK_ON;}
     else if (buttonStatus[BUTTONRIGHT]) {ReportData.HAT = DPAD_DOWN_MASK_ON;}
     else{ReportData.HAT = DPAD_NOTHING_MASK_ON;}
+    
   }
     
 }
 
 
 void buttonProcessing(){
-  
-  if (!navigationShortcut){
+  if(sliderMode == SDVX){
+    if (buttonStatus[BUTTONLEFT]) {ReportData.Button |= L3_MASK_ON;}
+    if (buttonStatus[BUTTONRIGHT]) {ReportData.Button |= R3_MASK_ON;}
+  }
+    if (!navigationShortcut){
     if (buttonStatus[BUTTONA]) {ReportData.Button |= A_MASK_ON;}
     if (buttonStatus[BUTTONB]) {ReportData.Button |= B_MASK_ON;}
     if (buttonStatus[BUTTONX]) {ReportData.Button |= X_MASK_ON;}
@@ -1590,6 +1555,9 @@ void buttonProcessing(){
     if (buttonStatus[BUTTONSELECT]){ReportData.Button |= SELECT_MASK_ON;}
     if (buttonStatus[BUTTONHOME]){ReportData.Button |= HOME_MASK_ON;}
     // Need more buttons...
+
+   
+    
   }else{
     if (buttonStatus[BUTTONA]) {ReportData.Button |= RB_MASK_ON;}
     if (buttonStatus[BUTTONB]) {ReportData.Button |= ZR_MASK_ON;}
@@ -1603,6 +1571,8 @@ void buttonProcessing(){
     if (buttonStatus[BUTTONSELECT]){ReportData.Button |= START_MASK_ON;}
     if (buttonStatus[SWITCHMODEPIN]){ReportData.Button |= HOME_MASK_ON;}
     // Need more buttons...
+    
+    
     
     // LEDS output
     if(calibrated){
@@ -1624,6 +1594,7 @@ void buttonProcessing(){
     
     
   }
+  
   
   
 }
@@ -1747,6 +1718,60 @@ extern "C"{
 
   void PDAC_PC_SERVICE(){ // Put the controller in service mode
     PDM_PC = true;
+  }
+
+  byte PDAC_PC_DEBUG(int i){
+    return SDVX_SENSED[1][i];
+  }
+  /*
+byte* PDAC_PC_SENSORSDEBUG_DATA(){
+    byte sensorsData[32];
+    int sensor = 0;
+    int i = 0;
+    
+    for(int j = 0; j < 32; j++){
+      if(j > 12 && j <= 24){
+      i = 1;
+      sensor -= 12;
+      }
+      else if(j > 24){
+        i = 2;
+        sensor -= 24;
+      }
+    sensorsData[j] = (short)mprs[i].readElectrodeData(sensor-1) - ((short)mprs[i].readElectrodeBaseline(sensor-1) << 2);
+    }
+    
+      return sensorsData;
+    
+  }
+   */
+
+  byte PDAC_PC_SENSORSDEBUG_DATA(int sensor){
+    int i = 0;
+    if(sensor > 12 && sensor <= 24){
+      i = 1;
+      sensor -= 12;
+    }
+    else if(sensor > 24){
+      i = 2;
+      sensor -= 24;
+    }
+    return (short)mprs[i].readElectrodeData(sensor-1) - ((short)mprs[i].readElectrodeBaseline(sensor-1) << 2);
+    
+  }
+  byte PDAC_PC_SENSORSDEBUG_BASELINE(int sensor){
+    int i = 0;
+    if(sensor > 12 && sensor <= 24){
+      i = 1;
+      sensor -= 12;
+    }
+    else if(sensor > 24){
+      i = 2;
+      sensor -= 24;
+    }
+    
+      return mprs[i].readElectrodeBaseline(sensor-1);
+    
   }
     
   }

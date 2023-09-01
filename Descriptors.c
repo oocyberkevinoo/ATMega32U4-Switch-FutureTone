@@ -1,5 +1,8 @@
 #include "Descriptors.h"
 
+// DIVA CONTROLLER by CyberKevin
+// Firmware version: v514 - 02/09/2023
+
 // HID Descriptors.
 const USB_Descriptor_HIDReport_Datatype_t PROGMEM JoystickReport[] = {
   HID_RI_USAGE_PAGE(8,1), /* Generic Desktop */
@@ -69,7 +72,7 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM LEDReport[] =
   HID_RI_LOGICAL_MINIMUM(8, 0x00),            
   HID_RI_LOGICAL_MAXIMUM(8, 0xFF),    
   HID_RI_REPORT_SIZE(8, 0x08),                
-  HID_RI_REPORT_COUNT(8, 4),                
+  HID_RI_REPORT_COUNT(8, 36),                
   HID_RI_FEATURE(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
   
   HID_RI_END_COLLECTION(0),
@@ -89,7 +92,7 @@ const USB_Descriptor_Device_t PROGMEM DeviceDescriptor = {
   .VendorID               = 0x0F0D,
   //.ProductID              = 0x0092,
   .ProductID              = 0x00FB,
-  .ReleaseNumber          = VERSION_BCD(2,0,1),
+  .ReleaseNumber          = VERSION_BCD(2,0,2),
 
   .ManufacturerStrIndex   = STRING_ID_Manufacturer,
   .ProductStrIndex        = STRING_ID_Product,

@@ -65,7 +65,9 @@ enum Commands {
     PDM_PC_ColorTest =            0x06,
     PDM_PC_TrailTest =            0x07,
     PDM_PC_NoTouchColorTest =     0x08,
-    PDM_PC_TouchColorTest =       0x09
+    PDM_PC_TouchColorTest =       0x09,
+    PDM_PC_Debug =                0x0A,
+    PDM_PC_SensorsDebug =         0x0B
 
 };
 
