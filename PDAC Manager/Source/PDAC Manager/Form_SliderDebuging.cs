@@ -49,7 +49,7 @@ namespace PDAC_Manager
                 text += $" {result}";
 
 
-                if (i == 12 || i == 24)
+                if (i == 11 || i == 23)
                     text += "  -|- ";
                 
             }
