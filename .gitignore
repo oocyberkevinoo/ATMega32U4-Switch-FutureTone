@@ -25,3 +25,7 @@ main_24sensors/main_24sensors.ino
 main/Settings.h
 main/Settings.c
 PDAC code + Manager.zip
+main/Settings.cpp
+main/SDVX.h
+main/SDVX.cpp
+main/ButtonsMapping.h
