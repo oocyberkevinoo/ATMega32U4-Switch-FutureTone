@@ -55,10 +55,11 @@
             this.btn_reload = new System.Windows.Forms.Button();
             this.btn_saveBackup = new System.Windows.Forms.Button();
             this.checkBox_halfLeds = new System.Windows.Forms.CheckBox();
+            this.btn_colors = new System.Windows.Forms.Button();
             this.btn_calibrate = new System.Windows.Forms.Button();
             this.colorDialog1 = new System.Windows.Forms.ColorDialog();
             this.button_color = new System.Windows.Forms.Button();
-            this.btn_colors = new System.Windows.Forms.Button();
+            this.btn_sliderDebug = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_LEDsBrightness)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_sensitivityTouch)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_sensitivityRelease)).BeginInit();
@@ -346,6 +347,19 @@
         "he slider,\r\nyou can activate this option to power on only half of them.");
             this.checkBox_halfLeds.UseVisualStyleBackColor = true;
             // 
+            // btn_colors
+            // 
+            this.btn_colors.Enabled = false;
+            this.btn_colors.Location = new System.Drawing.Point(251, 276);
+            this.btn_colors.Name = "btn_colors";
+            this.btn_colors.Size = new System.Drawing.Size(97, 28);
+            this.btn_colors.TabIndex = 6;
+            this.btn_colors.Text = "Colors (beta)";
+            this.toolTip1.SetToolTip(this.btn_colors, "Let you change some colors settings.\r\n(For now, it will not save if you unplug yo" +
+        "ur controller, it\'s just for testing purpose)");
+            this.btn_colors.UseVisualStyleBackColor = true;
+            this.btn_colors.Click += new System.EventHandler(this.button_trail_Click);
+            // 
             // btn_calibrate
             // 
             this.btn_calibrate.Enabled = false;
@@ -375,24 +389,23 @@
             this.button_color.Visible = false;
             this.button_color.Click += new System.EventHandler(this.button_color_Click);
             // 
-            // btn_colors
+            // btn_sliderDebug
             // 
-            this.btn_colors.Enabled = false;
-            this.btn_colors.Location = new System.Drawing.Point(251, 276);
-            this.btn_colors.Name = "btn_colors";
-            this.btn_colors.Size = new System.Drawing.Size(97, 28);
-            this.btn_colors.TabIndex = 6;
-            this.btn_colors.Text = "Colors (beta)";
-            this.toolTip1.SetToolTip(this.btn_colors, "Let you change some colors settings.\r\n(For now, it will not save if you unplug yo" +
-        "ur controller, it\'s just for testing purpose)");
-            this.btn_colors.UseVisualStyleBackColor = true;
-            this.btn_colors.Click += new System.EventHandler(this.button_trail_Click);
+            this.btn_sliderDebug.Enabled = false;
+            this.btn_sliderDebug.Location = new System.Drawing.Point(373, 118);
+            this.btn_sliderDebug.Name = "btn_sliderDebug";
+            this.btn_sliderDebug.Size = new System.Drawing.Size(139, 27);
+            this.btn_sliderDebug.TabIndex = 7;
+            this.btn_sliderDebug.Text = "Debug your slider";
+            this.btn_sliderDebug.UseVisualStyleBackColor = true;
+            this.btn_sliderDebug.Click += new System.EventHandler(this.btn_sliderDebug_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(712, 318);
+            this.Controls.Add(this.btn_sliderDebug);
             this.Controls.Add(this.btn_colors);
             this.Controls.Add(this.button_color);
             this.Controls.Add(this.checkBox_halfLeds);
@@ -421,7 +434,7 @@
             this.Controls.Add(this.btn_settingsSaveFile);
             this.Controls.Add(this.btn_connect);
             this.Name = "Form1";
-            this.Text = "PDAC Manager 0.2";
+            this.Text = "PDAC Manager 0.3";
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_LEDsBrightness)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_sensitivityTouch)).EndInit();
@@ -462,6 +475,7 @@
         private System.Windows.Forms.ColorDialog colorDialog1;
         private System.Windows.Forms.Button button_color;
         private System.Windows.Forms.Button btn_colors;
+        public System.Windows.Forms.Button btn_sliderDebug;
     }
 }
 

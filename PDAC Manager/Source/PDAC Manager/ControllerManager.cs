@@ -30,6 +30,8 @@ namespace PDAC_Manager
             public const byte TrailTest =           0x07;
             public const byte NoTouchColorTest =    0x08;
             public const byte TouchColorTest =      0x09;
+            public const byte Debug =               0x0A;
+            public const byte SliderDebug =         0x0B;
 
         }
         static public class PDAC_Configs
@@ -54,16 +56,21 @@ namespace PDAC_Manager
         }
 
         static byte[] LEDsBrightness = new byte[]   { 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 };
+        static byte LEDsBrightnessDefault = 0x00;
         static byte[] Sensitivity = new byte[]      { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+        static byte SensitivityDefault = 0x04;
         static byte[] Release = new byte[]          { 0x04, 0x03, 0x02, 0x01, 0x05, 0x06 };
+        static byte ReleaseDefault = 0x02;
         static byte[] Calibration = new byte[]      { 0x03, 0x04, 0x00, 0x01, 0x02 };
+        static byte CalibrationDefault = 0x04;
         static byte[] Navigation = new byte[]       { 0x00, 0x01 };
         static byte[] MprFilter = new byte[]        { 0x02, 0x00, 0x01 };
         static byte[] CustomFilter = new byte[]     { 0x02, 0x01, 0x00 };
         static byte[] LedsMode = new byte[]         { 0x00, 0x01, 0x02 };
         static byte[] HalfLedsMode = new byte[]     { 0x00, 0x01 };
+        static byte NoDefault = 0x00;
 
-        static int version = 513;
+        public static int version = 514;
         static Form1 form1;
         static Form_Color formColor;
         /*static HidDevice device;
@@ -95,15 +102,16 @@ namespace PDAC_Manager
                         //form1.UpdateLog($"{d.DevicePath}");
                         if (d.Attributes.Version != version)
                         {
-                            form1.UpdateLog($"WARNING! YOUR CONTROLLER IS NOT UPDATED!\r\nPlease update your controller or use a previous version of this software.");
+                            form1.UpdateLog($"Your controller is using firmware v{d.Attributes.Version}, this version of PDAC Manager need Firmware v{version}");
                             return;
                         }
-                            
+
+
                         form1.SetConnectState(true);
                         controller = d;
 
                         // If controller never been used with the manager before
-                        if (AskController(PDAC_Commands.Used) != PDAC_Used.AlreadyUsed)
+                        if (AskController(PDAC_Commands.Used)[2] != PDAC_Used.AlreadyUsed)
                         {
                             form1.UpdateLog("WARNING: this controller never been used with a manager before.\r\n" +
                                 "We recommend you to save your config in a file before doing any modification.");
@@ -147,12 +155,21 @@ namespace PDAC_Manager
             {
                 AskController(PDAC_Commands.Calibrate);
             }
-            catch (Exception)
+            catch (Exception e)
             {
 
-                Error();
+                Error(e.Message);
             }
             
+        }
+
+        static private byte GetConfigFromController(byte val, byte replace, byte offset)
+        {
+            byte config_val = AskController(PDAC_Commands.GetSetting, (byte)(val + offset))[2];
+            if (config_val == 0xFF)
+                config_val = replace;
+
+            return config_val;
         }
 
         static public void LoadConfigFromController(bool backup = false, string mode = "settings")
@@ -165,50 +182,51 @@ namespace PDAC_Manager
 
             try
             {
+                
                 form1.trackBar_LEDsBrightness.Value =
-                Array.IndexOf<byte>(LEDsBrightness, AskController(PDAC_Commands.GetSetting, (byte) (PDAC_Configs.LedsBrightness + offset)));
+                Array.IndexOf<byte>(LEDsBrightness, GetConfigFromController(PDAC_Configs.LedsBrightness, LEDsBrightnessDefault, offset));
 
                 form1.trackBar_sensitivityTouch.Value =
-                    Array.IndexOf<byte>(Sensitivity, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.Sensitivity + offset)));
+                    Array.IndexOf<byte>(Sensitivity, GetConfigFromController(PDAC_Configs.Sensitivity, SensitivityDefault, offset));
 
                 form1.comboBox_MprFilter.SelectedIndex =
-                    Array.IndexOf<byte>(MprFilter, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.MprFilter + offset)));
+                    Array.IndexOf<byte>(MprFilter, GetConfigFromController(PDAC_Configs.MprFilter, NoDefault, offset));
 
                 form1.comboBox_customFilter.SelectedIndex =
-                    Array.IndexOf<byte>(CustomFilter, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.CustomFilter + offset)));
+                    Array.IndexOf<byte>(CustomFilter, GetConfigFromController(PDAC_Configs.CustomFilter, NoDefault, offset));
 
                 form1.comboBox_ledsMode.SelectedIndex =
-                    Array.IndexOf<byte>(LedsMode, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.LedsMode + offset)));
+                    Array.IndexOf<byte>(LedsMode, GetConfigFromController(PDAC_Configs.LedsMode, NoDefault, offset));
 
                 form1.trackBar_sensitivityRelease.Value =
-                    Array.IndexOf<byte>(Release, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.Release + offset)));
+                    Array.IndexOf<byte>(Release, GetConfigFromController(PDAC_Configs.Release, ReleaseDefault, offset));
 
                 form1.trackBar_calibration.Value =
-                    Array.IndexOf<byte>(Calibration, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.Calibration + offset)));
+                    Array.IndexOf<byte>(Calibration, GetConfigFromController(PDAC_Configs.Calibration, CalibrationDefault, offset));
 
                 form1.comboBox_navMode.SelectedIndex =
-                    Array.IndexOf<byte>(Navigation, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.Navigation + offset)));
+                    Array.IndexOf<byte>(Navigation, GetConfigFromController(PDAC_Configs.Navigation, NoDefault, offset));
 
-                if (Array.IndexOf<byte>(HalfLedsMode, AskController(PDAC_Commands.GetSetting, (byte)(PDAC_Configs.HalfLeds + offset))) == 0x01)
+                if (Array.IndexOf<byte>(HalfLedsMode, GetConfigFromController(PDAC_Configs.HalfLeds, NoDefault, offset)) == 0x01)
                     form1.checkBox_halfLeds.Checked = true;
                 else
                     form1.checkBox_halfLeds.Checked = false;
 
                 form1.Update();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Error();
+                Error(e.Message);
                 
             }
             
 
         }
-        static private void Error()
+        static private void Error(string errorMsg = "Unknown Error")
         {
             if (error)
                 return;
-            form1.UpdateLog("An error occured, Device disconnected.");
+            form1.UpdateLog("An error occured, Device disconnected.\nError: "+errorMsg);
             form1.SetConnectState(false);
             error = true;
         }
@@ -242,15 +260,15 @@ namespace PDAC_Manager
                 AskController(PDAC_Commands.Reload);
                 form1.UpdateLog("Configuration uploaded.");
             }
-            catch (Exception)
+            catch (Exception e)
             {
 
-                Error();
+                Error(e.Message);
             }
             
         }
 
-        static public byte AskController(byte command, byte value = 0x00, byte value2 = 0x00, byte value3 = 0x00)
+        static public byte[] AskController(byte command, byte value = 0x00, byte value2 = 0x00, byte value3 = 0x00)
         {
 
    
@@ -258,8 +276,8 @@ namespace PDAC_Manager
 
             if (!CheckingDeviceIsAvailable())
             {
-                Error();
-                return 0xFF;
+                Error("No Device found.");
+                return new byte[] { 0xFF};
             }
 
             controller.WriteFeatureData(data);
@@ -277,7 +295,7 @@ namespace PDAC_Manager
             }
             form1.UpdateLog(result);*/
 
-            return data[2];
+            return data;
         }
 
         public static void SaveSettingsToFile()

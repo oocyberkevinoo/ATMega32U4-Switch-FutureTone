@@ -21,7 +21,7 @@ namespace PDAC_Manager
         {
             InitializeComponent();
             ControllerManager.Initialize(this);
-            UpdateLog("Software is ready, please connect your controller now.");
+            UpdateLog("Software is ready, please connect your controller now.\nController Firmware required: v"+ControllerManager.version);
         }
 
 
@@ -43,6 +43,7 @@ namespace PDAC_Manager
             btn_saveBackup.Enabled = connected;
             btn_reload.Enabled =  connected;
             btn_calibrate.Enabled = connected;
+            btn_sliderDebug.Enabled = connected;
 
             trackBar_calibration.Enabled = connected;
             trackBar_LEDsBrightness.Enabled = connected;   
@@ -119,6 +120,12 @@ namespace PDAC_Manager
         private void button_trail_Click(object sender, EventArgs e)
         {
             Form_Color form = new Form_Color();
+            form.ShowDialog();
+        }
+
+        private void btn_sliderDebug_Click(object sender, EventArgs e)
+        {
+            Form_SliderDebuging form = new Form_SliderDebuging();
             form.ShowDialog();
         }
     }

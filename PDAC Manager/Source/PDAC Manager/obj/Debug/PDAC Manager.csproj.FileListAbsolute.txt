@@ -13,3 +13,4 @@ C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Debug\PDAC Manage
 C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\bin\Debug\HidLibrary.dll
 C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\bin\Debug\HidLibrary.pdb
 C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Debug\PDAC_Manager.Form_Color.resources
+C:\Users\cyberkevin\source\repos\PDAC Manager\PDAC Manager\obj\Debug\PDAC_Manager.Form_SliderDebuging.resources
