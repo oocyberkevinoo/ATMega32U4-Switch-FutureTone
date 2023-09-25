@@ -163,13 +163,25 @@ namespace PDAC_Manager
             
         }
 
-        static private byte GetConfigFromController(byte val, byte replace, byte offset)
+        // Old function to retrieve config from controller
+        /*static private byte GetConfigFromController(byte val, byte replace, byte offset)
         {
             byte config_val = AskController(PDAC_Commands.GetSetting, (byte)(val + offset))[2];
+            
             if (config_val == 0xFF)
                 config_val = replace;
 
             return config_val;
+        }*/
+
+        static private int GetConfigFromController(byte[] array, byte config_id, byte default_config_val, byte offset)
+        {
+            byte config_val = AskController(PDAC_Commands.GetSetting, (byte)(config_id + offset))[2];
+            int result = Array.IndexOf<byte>(array, config_val);
+            if (result == -1 || config_val == 0xFF)
+                result = Array.IndexOf<byte>(array, default_config_val);
+
+            return result;
         }
 
         static public void LoadConfigFromController(bool backup = false, string mode = "settings")
@@ -184,30 +196,30 @@ namespace PDAC_Manager
             {
                 
                 form1.trackBar_LEDsBrightness.Value =
-                Array.IndexOf<byte>(LEDsBrightness, GetConfigFromController(PDAC_Configs.LedsBrightness, LEDsBrightnessDefault, offset));
+                    GetConfigFromController(LEDsBrightness, PDAC_Configs.LedsBrightness, LEDsBrightnessDefault, offset);
 
                 form1.trackBar_sensitivityTouch.Value =
-                    Array.IndexOf<byte>(Sensitivity, GetConfigFromController(PDAC_Configs.Sensitivity, SensitivityDefault, offset));
+                    GetConfigFromController(Sensitivity, PDAC_Configs.Sensitivity, SensitivityDefault, offset);
 
                 form1.comboBox_MprFilter.SelectedIndex =
-                    Array.IndexOf<byte>(MprFilter, GetConfigFromController(PDAC_Configs.MprFilter, NoDefault, offset));
+                    GetConfigFromController(MprFilter, PDAC_Configs.MprFilter, NoDefault, offset);
 
                 form1.comboBox_customFilter.SelectedIndex =
-                    Array.IndexOf<byte>(CustomFilter, GetConfigFromController(PDAC_Configs.CustomFilter, NoDefault, offset));
+                    GetConfigFromController(CustomFilter, PDAC_Configs.CustomFilter, NoDefault, offset);
 
                 form1.comboBox_ledsMode.SelectedIndex =
-                    Array.IndexOf<byte>(LedsMode, GetConfigFromController(PDAC_Configs.LedsMode, NoDefault, offset));
+                    GetConfigFromController(LedsMode, PDAC_Configs.LedsMode, NoDefault, offset);
 
                 form1.trackBar_sensitivityRelease.Value =
-                    Array.IndexOf<byte>(Release, GetConfigFromController(PDAC_Configs.Release, ReleaseDefault, offset));
+                    GetConfigFromController(Release, PDAC_Configs.Release, ReleaseDefault, offset);
 
                 form1.trackBar_calibration.Value =
-                    Array.IndexOf<byte>(Calibration, GetConfigFromController(PDAC_Configs.Calibration, CalibrationDefault, offset));
+                    GetConfigFromController(Calibration, PDAC_Configs.Calibration, CalibrationDefault, offset);
 
                 form1.comboBox_navMode.SelectedIndex =
-                    Array.IndexOf<byte>(Navigation, GetConfigFromController(PDAC_Configs.Navigation, NoDefault, offset));
+                    GetConfigFromController(Navigation, PDAC_Configs.Navigation, NoDefault, offset);
 
-                if (Array.IndexOf<byte>(HalfLedsMode, GetConfigFromController(PDAC_Configs.HalfLeds, NoDefault, offset)) == 0x01)
+                if (GetConfigFromController(HalfLedsMode, PDAC_Configs.HalfLeds, NoDefault, offset) == 0x01)
                     form1.checkBox_halfLeds.Checked = true;
                 else
                     form1.checkBox_halfLeds.Checked = false;

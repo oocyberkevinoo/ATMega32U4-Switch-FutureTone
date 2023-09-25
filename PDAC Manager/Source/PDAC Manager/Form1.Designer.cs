@@ -434,7 +434,7 @@
             this.Controls.Add(this.btn_settingsSaveFile);
             this.Controls.Add(this.btn_connect);
             this.Name = "Form1";
-            this.Text = "PDAC Manager 0.3";
+            this.Text = "PDAC Manager 0.3.1";
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_LEDsBrightness)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar_sensitivityTouch)).EndInit();
